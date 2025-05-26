@@ -166,7 +166,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   const regionalBroadcasts = game.broadcasts?.filter(b => !b.isNational) || [];
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-2xl relative aspect-video border border-purple-800/30">
+    <div className="rounded-lg overflow-hidden shadow-2xl relative sm:aspect-video min-h-[600px] sm:min-h-0 border border-purple-800/30">
       {/* Blurred Stadium Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
