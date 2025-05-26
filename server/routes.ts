@@ -4163,6 +4163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to setup stream sources table' });
     }
   });
+
+  // Redis test routes
+  app.use('/api', redisTestRoutes);
   
   const httpServer = createServer(app);
   
