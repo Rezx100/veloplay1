@@ -59,19 +59,33 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
         notifyMinutesBefore: minutesBefore
       });
 
-      setHasAlert(true);
-      // Toast notification disabled per user request
-      // toast({
-      //   title: 'Game Alert Set',
-      //   description: `You'll be notified ${minutesBefore} minutes before ${game.name} starts`,
-      //   variant: 'default',
-      // });
+      if (result.ok) {
+        setHasAlert(true);
+        toast({
+          title: 'Game Alert Set',
+          description: `You'll be notified ${minutesBefore} minutes before ${game.name} starts`,
+          variant: 'default',
+        });
+      } else {
+        const errorData = await result.json();
+        if (result.status === 409) {
+          // Alert already exists - show informative message
+          setHasAlert(true);
+          toast({
+            title: 'Alert Already Set',
+            description: `You already have an alert set for this game. You'll be notified ${minutesBefore} minutes before ${game.name} starts.`,
+            variant: 'default',
+          });
+        } else {
+          throw new Error(errorData.message || 'Failed to set alert');
+        }
+      }
     } catch (error) {
       console.error('Error setting game alert:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to set game alert. Please try again.',
-        variant: 'destructive',
+        title: 'Unable to Set Alert',
+        description: error instanceof Error ? error.message : 'Please try again later.',
+        variant: 'default',
       });
     }
   };
@@ -169,7 +183,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       {/* Content Layer */}
       <div className="relative z-10 h-full flex flex-col">
         {/* Top Header with League Badge and Alert Button */}
-        <div className="flex justify-between items-start p-2 sm:p-4">
+        <div className="flex justify-between items-start p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3 bg-black/40 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-2">
             {getLeagueIcon()}
             <Badge className={`text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm border-0 ${
@@ -235,12 +249,12 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           </div>
         </div>
 
-        {/* Main Content - Screenshot-Matching Mobile Design */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-3 sm:py-0">
-          {/* Team Matchup - Screenshot Style */}
-          <div className="flex items-center justify-between w-full max-w-sm sm:max-w-none sm:gap-16 mb-8 sm:mb-12">
+        {/* Main Content - Team Logos and Info */}
+        <div className="flex-1 flex flex-col items-center justify-center px-3 sm:px-6">
+          {/* Team Matchup with Larger Logos and Better Spacing */}
+          <div className="flex items-center justify-center gap-8 sm:gap-16 mb-8 sm:mb-12">
             {/* Away Team */}
-            <div className="text-center flex-1">
+            <div className="text-center">
               <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.awayTeam.logo} 
@@ -248,17 +262,18 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                   className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
+              {/* Show abbreviation prominently */}
               <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-gray-300 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
             </div>
             
-            {/* VS Section - Centered */}
-            <div className="px-3 sm:px-4 flex-shrink-0">
+            {/* VS Section - More Prominent */}
+            <div className="px-2 sm:px-4">
               <div className="text-2xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
             </div>
             
             {/* Home Team */}
-            <div className="text-center flex-1">
+            <div className="text-center">
               <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.homeTeam.logo} 
@@ -266,47 +281,48 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                   className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
+              {/* Show abbreviation prominently */}
               <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-gray-300 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
             </div>
           </div>
 
-          {/* Countdown Timer - Large & Prominent */}
+          {/* Countdown Timer - More Prominent */}
           <div className="text-center mb-8 sm:mb-12">
-            <div className="text-5xl sm:text-6xl font-bold text-white mb-3 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
+            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
               {timeRemaining}
             </div>
-            <p className="text-gray-300 text-lg sm:text-xl font-medium">Until Game Time</p>
+            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Time Card */}
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 mb-4 w-full max-w-xs sm:max-w-none sm:min-w-[200px]">
-            <div className="flex items-center justify-center gap-3 text-white">
-              <Clock className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-base sm:text-base">{formatGameTime()}</span>
-            </div>
-          </div>
-
-          {/* Venue Card */}
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 mb-6 w-full max-w-xs sm:max-w-none sm:min-w-[250px]">
-            <div className="flex items-center justify-center gap-3 text-white">
-              <MapPin className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-base sm:text-base">{game.venue.name}</span>
-            </div>
-          </div>
-
-          {/* Available On Section - Screenshot Style */}
-          {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
-            <div className="text-center w-full max-w-xs sm:max-w-none">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Calendar className="w-5 h-5 text-white" />
-                <span className="text-white font-medium text-base">Available On</span>
+          {/* Game Details - Centered Cards */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[140px]">
+              <div className="flex items-center justify-center gap-2 text-white">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
               </div>
-              <div className="flex flex-col gap-3 items-center">
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[180px]">
+              <div className="flex items-center justify-center gap-2 text-white">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Broadcast Info */}
+          {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
+            <div className="mb-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Tv className="w-4 h-4 text-white" />
+                <span className="text-white font-medium">Available On</span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
                 {nationalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-purple-600/40 text-purple-200 border-purple-400/50 backdrop-blur-sm px-6 py-2 text-sm font-medium rounded-full"
+                    className="bg-blue-600/30 text-blue-200 border-blue-400/50 backdrop-blur-sm"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
@@ -314,7 +330,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 {regionalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-gray-600/40 text-gray-200 border-gray-400/50 backdrop-blur-sm px-6 py-2 text-sm font-medium rounded-full"
+                    className="bg-purple-600/30 text-purple-200 border-purple-400/50 backdrop-blur-sm"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
