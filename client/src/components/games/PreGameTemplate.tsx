@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { SiNhl, SiNba, SiMlb } from 'react-icons/si';
 import { IoAmericanFootballOutline } from 'react-icons/io5';
-import SimpleGameAlertButton from './SimpleGameAlertButton';
 
 interface PreGameTemplateProps {
   game: Game;
@@ -18,6 +17,64 @@ interface PreGameTemplateProps {
 export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isWarmupTime, setIsWarmupTime] = useState(false);
+  const [hasAlert, setHasAlert] = useState<boolean>(false);
+  const { toast } = useToast();
+
+  // Check for existing alert when component mounts with cache busting
+  useEffect(() => {
+    const checkExistingAlert = async () => {
+      try {
+        const response = await fetch(`/api/game-alerts/${game.id}?t=${Date.now()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          credentials: 'include', // Important for session cookies
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🎯 Alert check result for game', game.id, ':', data);
+          setHasAlert(data.exists || false);
+        } else {
+          console.log('⚠️ Alert check failed:', response.status);
+          setHasAlert(false);
+        }
+      } catch (error) {
+        console.error('Error checking existing alert:', error);
+        setHasAlert(false);
+      }
+    };
+
+    // Small delay to ensure auth is ready
+    const timeoutId = setTimeout(checkExistingAlert, 100);
+    return () => clearTimeout(timeoutId);
+  }, [game.id]);
+
+  const handleSetAlert = async (minutesBefore: number) => {
+    try {
+      const result = await apiRequest('POST', '/api/game-alerts-temp', {
+        gameId: game.id,
+        notifyMinutesBefore: minutesBefore
+      });
+
+      setHasAlert(true);
+      // Toast notification disabled per user request
+      // toast({
+      //   title: 'Game Alert Set',
+      //   description: `You'll be notified ${minutesBefore} minutes before ${game.name} starts`,
+      //   variant: 'default',
+      // });
+    } catch (error) {
+      console.error('Error setting game alert:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to set game alert. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   
   // Generate stadium background image based on league
@@ -128,11 +185,53 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           
           {/* Set Alert Button - Mobile Optimized */}
           <div className="flex-shrink-0">
-            <SimpleGameAlertButton 
-              gameId={game.id}
-              gameName={game.name}
-              className="text-xs sm:text-sm px-2 sm:px-3"
-            />
+            {hasAlert ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
+                disabled
+              >
+                <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 fill-current animate-bell-ring" />
+                <span className="hidden sm:inline">Alert Set</span>
+                <span className="sm:hidden">Set</span>
+              </Button>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Set Alert</span>
+                    <span className="sm:hidden">Alert</span>
+                    <ChevronDown className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 sm:w-48">
+                  <DropdownMenuItem onClick={() => handleSetAlert(5)}>
+                    5 minutes before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetAlert(10)}>
+                    10 minutes before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetAlert(15)}>
+                    15 minutes before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetAlert(30)}>
+                    30 minutes before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetAlert(60)}>
+                    1 hour before
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSetAlert(120)}>
+                    2 hours before
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 

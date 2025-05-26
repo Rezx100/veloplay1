@@ -3646,12 +3646,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { gameId } = req.params;
       const userId = req.user?.id;
       
-      console.log('🔍 AUTH CHECK - Session:', req.session);
-      console.log('🔍 AUTH CHECK - User from middleware:', req.user);
       console.log('🔍 Checking alert for user:', userId, 'game:', gameId);
       
       if (!userId) {
-        console.log('❌ User not authenticated in alert check');
+        console.log('❌ User not authenticated');
         return res.status(401).json({ 
           exists: false,
           error: 'User not authenticated' 
