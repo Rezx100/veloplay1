@@ -139,8 +139,7 @@ export default function SimpleGameAlertButton({ gameId, gameName, className = ""
         game_id: gameId,
         email: user.email,
         notify_minutes_before: minutesBefore,
-        is_notified: false,
-        created_at: new Date().toISOString()
+        is_notified: false
       };
 
       console.log('➕ SimpleGameAlertButton: Alert data:', alertData);
