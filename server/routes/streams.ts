@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { isAuthenticated } from '../supabaseAuth';
 import { isAdmin } from '../adminMiddleware';
-import { supabase } from '../db';
+import { storage } from '../neonStorage';
 
 // Create a router
 const router = Router();

@@ -459,7 +459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializeSubscriptionPlans();
   
   // Setup stream sources table
-  app.get('/api/setup-stream-sources', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/setup-stream-sources', authMiddleware, requireAdmin, async (req, res) => {
     try {
       const { setupStreamSourcesTable } = require('./routes/db-setup');
       const result = await setupStreamSourcesTable();

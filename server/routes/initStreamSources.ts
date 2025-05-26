@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { supabase } from '../db';
+import { storage } from '../neonStorage';
 
 /**
  * Create the stream_sources table if it doesn't exist

@@ -1,5 +1,5 @@
 // Direct Stream URL Management Service
-import { supabase } from '../db';
+import { storage } from '../neonStorage.ts';
 import { persistentStorage } from './persistentStorage';
 import streamSources from './loadStreamSources.js';
 

@@ -1,4 +1,4 @@
-import { supabase } from './db';
+import { storage } from './neonStorage';
 import fs from 'fs';
 import path from 'path';
 
