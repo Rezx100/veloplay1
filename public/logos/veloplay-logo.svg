@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="40" viewBox="0 0 200 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9b30ff" />
+      <stop offset="100%" stop-color="#7f00ff" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sports ball icon -->
+  <circle cx="20" cy="20" r="15" fill="#200944" stroke="url(#purpleGradient)" stroke-width="2" />
+  
+  <!-- Basketball-style lines -->
+  <path d="M8,20 H32" stroke="#7f00ff" stroke-width="1.5" opacity="0.8" />
+  <path d="M20,8 V32" stroke="#7f00ff" stroke-width="1.5" opacity="0.8" />
+  <path d="M12,12 Q20,5 28,12" stroke="#7f00ff" stroke-width="1.5" fill="none" />
+  <path d="M12,28 Q20,35 28,28" stroke="#7f00ff" stroke-width="1.5" fill="none" />
+  
+  <!-- VeloPlay text as paths rather than text elements -->
+  <!-- V -->
+  <path d="M45,10 L52,26 L59,10 L63,10 L54,30 L50,30 L41,10 Z" fill="#f2f2f2"/>
+  <!-- e -->
+  <path d="M66,15 Q70,13 74,15 Q78,17 78,21 L78,22 L66,22 Q66,25 69,26 Q72,27 74,25 L77,27 Q73,31 67,29 Q61,27 62,21 Q63,15 66,15 M66,19 L74,19 Q74,17 72,16 Q70,15 68,16 Q66,17 66,19" fill="#f2f2f2"/>
+  <!-- l -->
+  <path d="M82,10 L82,30 L86,30 L86,10 Z" fill="#f2f2f2"/>
+  <!-- o -->
+  <path d="M90,15 Q95,13 100,15 Q105,17 105,21 Q105,25 100,27 Q95,29 90,27 Q85,25 85,21 Q85,17 90,15 M90,18 Q88,19 89,21 Q90,23 92,24 Q94,25 96,24 Q98,23 99,21 Q100,19 98,18 Q96,17 94,18 Q92,17 90,18" fill="#f2f2f2"/>
+  
+  <!-- Play with gradient -->
+  <!-- P -->
+  <path d="M110,10 L122,10 Q126,12 126,15 Q126,18 122,20 L120,20 L119,20 L110,20 Z M114,14 L114,16 L120,16 Q120,14 118,14 Z" fill="url(#purpleGradient)"/>
+  <path d="M110,20 L110,30 L114,30 L114,20 Z" fill="url(#purpleGradient)"/>
+  <!-- l -->
+  <path d="M128,10 L128,30 L132,30 L132,10 Z" fill="url(#purpleGradient)"/>
+  <!-- a -->
+  <path d="M136,15 Q141,13 146,15 Q149,17 149,21 L149,30 L145,30 L145,28 Q142,31 137,29 Q134,27 134,24 Q134,21 137,19 Q140,17 145,19 L145,19 Q144,17 142,16 Q140,15 138,16 Q136,17 136,19 Z M139,25 Q140,26 143,26 Q146,26 146,22 Q141,20 139,22 Q138,23 139,25" fill="url(#purpleGradient)"/>
+  <!-- y -->
+  <path d="M153,15 L153,30 L157,30 L157,21 Q157,19 159,18 Q161,17 162,18 Q163,19 163,21 L163,30 L167,30 L167,19 Q167,15 163,14 Q161,13 158,15 L157,15 Z" fill="url(#purpleGradient)"/>
+</svg>

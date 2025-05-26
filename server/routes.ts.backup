@@ -1,0 +1,2286 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { isAuthenticated, supabaseClient } from "./supabaseAuth"; // Use Supabase for auth
+import { isAdmin } from "./adminMiddleware"; // Admin middleware
+import { trackUserActivity, getActiveUsers, startCleanupInterval } from "./activeUsers";
+import { 
+  getLeagueGames, 
+  getAllGames, 
+  getGameById,
+  getRawESPNData,
+  addTestDelayedAndPostponedGames 
+} from "./espnApi";
+import { 
+  initEmailService, 
+  handleWelcomeEmail, 
+  handleSubscriptionExpirationEmail,
+  handleGameAlertEmail,
+  handleTestEmail 
+} from "./emailService";
+import { z } from "zod";
+import { insertStreamSchema, insertSubscriptionSchema, Game } from "@shared/schema";
+import { getStreamUrlsForGame } from "./streamMapping";
+import axios from "axios";
+import fetch from "node-fetch";
+
+// Function to initialize subscription plans
+async function initializeSubscriptionPlans() {
+  try {
+    const existingPlans = await storage.getAllSubscriptionPlans();
+    
+    // Only create default plans if none exist
+    if (existingPlans.length === 0) {
+      console.log("Creating default subscription plans...");
+      
+      // Basic plan
+      await storage.createSubscriptionPlan({
+        name: "Basic",
+        price: 999, // $9.99
+        description: "Access to all live games with standard video quality",
+        durationDays: 30,
+        features: [
+          "Live game streaming", 
+          "Standard definition (SD) quality", 
+          "Access to game replays",
+          "Basic statistics"
+        ],
+        isPopular: false
+      });
+      
+      // Premium plan (most popular)
+      await storage.createSubscriptionPlan({
+        name: "Premium",
+        price: 1499, // $14.99
+        description: "Get the full sports experience with HD streaming and advanced features",
+        durationDays: 30,
+        features: [
+          "Live game streaming", 
+          "High definition (HD) quality", 
+          "Access to game replays",
+          "Detailed game statistics",
+          "Multiple device support",
+          "Ad-free experience"
+        ],
+        isPopular: true
+      });
+      
+      // Annual plan (best value)
+      await storage.createSubscriptionPlan({
+        name: "Annual",
+        price: 14999, // $149.99
+        description: "Our best value plan with all premium features at a discounted annual rate",
+        durationDays: 365,
+        features: [
+          "Live game streaming", 
+          "High definition (HD) quality", 
+          "Access to game replays",
+          "Detailed game statistics",
+          "Multiple device support",
+          "Ad-free experience",
+          "Early access to new features",
+          "Save over 15% compared to monthly"
+        ],
+        isPopular: false
+      });
+      
+      console.log("Default subscription plans created successfully");
+    }
+  } catch (error) {
+    console.error("Error initializing subscription plans:", error);
+  }
+}
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize services
+  await storage.initializeLeagues();
+  await initEmailService();
+  
+  // Initialize subscription plans if they don't exist
+  await initializeSubscriptionPlans();
+  
+  // Handle email verification redirects from Supabase
+  app.get('/auth/callback', async (req, res) => {
+    try {
+      const { token_hash, type, error_description, returnTo, email, code } = req.query;
+      const currentUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Get the return URL if provided or use default
+      const returnUrl = returnTo ? decodeURIComponent(returnTo as string) : '/';
+      
+      console.log(`[AUTH] Callback received with type: ${type}, email: ${email}, returnTo: ${returnUrl}`);
+      
+      // If there's an error in the URL, redirect with the error
+      if (error_description) {
+        console.error("Verification error:", error_description);
+        return res.redirect(`/login?verification=error&message=${encodeURIComponent(error_description as string)}`);
+      }
+      
+      // Handle Supabase auth code exchange (for auto-login after verification)
+      if (code) {
+        try {
+          console.log("[AUTH] Auth code found, exchanging for session");
+          
+          // Create HTML form for auto-login
+          // This uses JavaScript to automatically exchange the code for a session
+          // and then redirect to the original page
+          // Handle code exchange server-side and create a redirect response with an auto-refresh
+          try {
+            // Exchange the code for a session directly on the server
+            const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code as string);
+            
+            if (error) {
+              console.error('[AUTH] Error exchanging code for session:', error);
+              return res.redirect('/login?error=verification_failed');
+            }
+            
+            // Get the user's session
+            const session = data?.session;
+            
+            if (!session) {
+              console.error('[AUTH] No session returned from code exchange');
+              return res.redirect('/login?error=no_session');
+            }
+            
+            // Set a cookie with the session token so the client-side app can pick it up
+            const expiresDate = new Date((session.expires_at || (Date.now()/1000 + 3600)) * 1000);
+            res.cookie('sb-session', session.access_token || '', { 
+              httpOnly: false, 
+              expires: expiresDate,
+              path: '/' 
+            });
+            
+            // Redirect with special verification success parameter
+            const redirectPath = returnUrl.includes('?') 
+              ? `${returnUrl}&verification=success&t=${Date.now()}` 
+              : `${returnUrl}?verification=success&t=${Date.now()}`;
+            
+            console.log('[AUTH] Verification successful, redirecting to:', redirectPath);
+            
+            // Send a special HTML response that will:
+            // 1. Set the session in localStorage
+            // 2. Redirect to the original page with verification=success
+            return res.send(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Verification Complete</title>
+                <style>
+                  body {
+                    font-family: Arial, sans-serif;
+                    background-color: #0d021f;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    margin: 0;
+                  }
+                  .container {
+                    text-align: center;
+                    max-width: 500px;
+                    padding: 2rem;
+                  }
+                  .spinner {
+                    width: 40px;
+                    height: 40px;
+                    margin: 0 auto 1rem;
+                    border: 4px solid rgba(127, 0, 255, 0.3);
+                    border-radius: 50%;
+                    border-top-color: #7f00ff;
+                    animation: spin 1s ease infinite;
+                  }
+                  @keyframes spin {
+                    to { transform: rotate(360deg); }
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="spinner"></div>
+                  <h2>Verification Complete!</h2>
+                  <p>Your email has been verified successfully. Redirecting you back to the app...</p>
+                </div>
+                <script>
+                  // Store the session in localStorage
+                  localStorage.setItem('sb-access-token', ${JSON.stringify(session.access_token)});
+                  localStorage.setItem('sb-refresh-token', ${JSON.stringify(session.refresh_token)});
+                  localStorage.setItem('email_verified', 'true');
+                  
+                  // Get any original page URL that was stored when the verification was requested
+                  const originalGameUrl = localStorage.getItem('gameUrlBeforeVerification');
+                  const redirectUrl = originalGameUrl || ${JSON.stringify(redirectPath)};
+                  
+                  // Redirect after a short delay
+                  setTimeout(() => {
+                    window.location.href = redirectUrl;
+                  }, 1500);
+                </script>
+              </body>
+              </html>
+            `);
+          } catch (serverError) {
+            console.error('[AUTH] Server error during verification code exchange:', serverError);
+            return res.redirect('/login?error=server_error');
+          }
+        } catch (codeError) {
+          console.error("[AUTH] Error exchanging code for session:", codeError);
+          return res.redirect('/login?error=session_exchange_failed');
+        }
+      }
+      
+      // If this is email confirmation, redirect appropriately
+      if (type === 'email_confirmation' || type === 'signup') {
+        console.log("[AUTH] Email verification callback received! Redirecting to:", returnUrl);
+        
+        if (email) {
+          // Attempt to auto-login the user
+          try {
+            // Try to trigger a passwordless signin with proper options
+            const { error } = await supabaseClient.auth.signInWithOtp({
+              email: email as string,
+              options: {
+                emailRedirectTo: `${currentUrl}/auth/callback?returnTo=${encodeURIComponent(returnUrl)}`
+              }
+            });
+            
+            if (error) {
+              console.log("[AUTH] Could not auto-login user:", error.message);
+            } else {
+              console.log("[AUTH] OTP login triggered for verified user");
+            }
+          } catch (loginError) {
+            console.error("[AUTH] Error attempting auto-login:", loginError);
+          }
+        }
+        
+        // Set successful verification flag in the URL
+        const redirectPath = returnUrl.includes('?') 
+          ? `${returnUrl}&verification=success` 
+          : `${returnUrl}?verification=success`;
+        
+        return res.redirect(redirectPath);
+      }
+      
+      // For password recovery or other types
+      if (type === 'recovery') {
+        return res.redirect('/reset-password');
+      }
+      
+      // Default fallback redirect
+      return res.redirect(returnUrl);
+    } catch (error) {
+      console.error("Error in auth callback:", error);
+      return res.redirect('/login?error=callback_error');
+    }
+  });
+  
+  // Email verification endpoint - handles both signup and backup verification
+  app.post('/api/auth/send-verification', async (req, res) => {
+    try {
+      const { email, firstName, useDirectMethod, returnUrl } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      console.log(`[VERIFICATION] Sending verification email to: ${email}`);
+      
+      // Initialize email service right away to ensure it's loaded
+      const emailService = await import('./services/emailService');
+      
+      // Check if Resend API key is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("[VERIFICATION] RESEND_API_KEY not configured!");
+        return res.status(500).json({ 
+          message: "Email service not properly configured. Please contact support.", 
+          success: false
+        });
+      }
+      
+      // Get hostname from request or use default production domain
+      const host = req.get('host') || 'veloplay.tv';
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('replit');
+      const protocol = isLocalhost ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
+      
+      console.log(`[VERIFICATION] Using base URL: ${baseUrl}`);
+      
+      // Get the return URL from request or use default
+      const userReturnUrl = returnUrl || '/';
+      
+      // Build the redirect URL with return path encoded
+      const redirectTo = `${baseUrl}/auth/callback?returnTo=${encodeURIComponent(userReturnUrl)}`;
+      console.log(`[VERIFICATION] Redirect URL: ${redirectTo} (will return to: ${userReturnUrl})`);
+      
+      // COMPLETELY BYPASS Supabase email system and use our own custom verification email
+      try {
+        console.log("[VERIFICATION] Sending custom verification email via Resend...");
+        // Generate a verification link with the callback that handles auto-login and redirects to origin
+        const verificationLink = `${baseUrl}/auth/callback?returnTo=${encodeURIComponent(userReturnUrl)}&email=${encodeURIComponent(email)}`;
+        
+        // Send our verification email using the emailService
+        const result = await emailService.sendVerificationEmail(email, verificationLink);
+        
+        if (result.success) {
+          console.log("[VERIFICATION] Successfully sent verification email via Resend");
+          
+          // Still trigger Supabase verification for backend purposes only,
+          // but we only care about the backend verification, not their email
+          try {
+            await supabaseClient.auth.resend({
+              type: 'signup',
+              email: email,
+              options: {
+                emailRedirectTo: redirectTo
+              }
+            });
+            console.log("[VERIFICATION] Also triggered Supabase verification (backend only)");
+          } catch (supabaseError) {
+            console.error("[VERIFICATION] Supabase verification trigger error:", supabaseError);
+            // Continue anyway since we have our primary email
+          }
+          
+          return res.status(200).json({ 
+            message: "Verification email sent. Please check your inbox and spam folder for an email from noreply@veloplay.tv", 
+            success: true 
+          });
+        } else {
+          console.error("[VERIFICATION] Direct email sending failed:", result.error);
+          // Continue to fallback methods
+        }
+      } catch (directError) {
+        console.error("[VERIFICATION] Error with direct email method:", directError);
+        // Continue to fallback methods using Supabase
+      }
+      
+      // FALLBACK: Create a simple plain email as a last resort
+      try {
+        console.log("[VERIFICATION] Attempting fallback plain verification email...");
+        
+        // Create a very simple plain email as last resort
+        const plainEmailHtml = `
+          <div style="max-width: 600px; font-family: Arial, sans-serif;">
+            <h2>VeloPlay Email Verification</h2>
+            <p>Hello,</p>
+            <p>Please verify your email by clicking this link:</p>
+            <p><a href="${verificationLink}">${verificationLink}</a></p>
+            <p>Thank you,<br>The VeloPlay Team</p>
+          </div>
+        `;
+        
+        // Send plain email directly
+        const { data: plainData, error: plainError } = await resend.emails.send({
+          from: 'noreply@veloplay.tv',
+          to: email,
+          subject: 'VeloPlay Account Verification',
+          html: plainEmailHtml,
+        });
+        
+        if (!plainError) {
+          console.log("[VERIFICATION] Successfully sent plain verification email");
+          
+          // Also try to trigger Supabase verification silently (without relying on their email)
+          try {
+            await supabaseClient.auth.resend({
+              type: 'signup',
+              email: email,
+              options: {
+                emailRedirectTo: redirectTo
+              }
+            });
+          } catch (e) {
+            // Ignore errors, we don't depend on this working
+          }
+          
+          return res.status(200).json({ 
+            message: "Verification email sent. Please check your inbox and spam folder for an email from noreply@veloplay.tv",
+            success: true
+          });
+        } else {
+          console.error("[VERIFICATION] Plain email send failed:", plainError);
+          // All methods have failed, return error
+          return res.status(500).json({ 
+            message: "Failed to send verification email. Please try again later or contact support.",
+            success: false
+          });
+        }
+      } catch (fallbackError) {
+        console.error("[VERIFICATION] Fallback method failed:", fallbackError);
+        return res.status(500).json({ 
+          message: "Failed to send verification email. Please try again later or contact support.",
+          success: false
+        });
+      }
+      
+      // If we get here, all methods failed
+      return res.status(500).json({ 
+        message: "Failed to send verification email through all available methods. Please try again later or contact support.", 
+        success: false
+      });
+    } catch (error) {
+      console.error("[VERIFICATION] Error in verification email endpoint:", error);
+      return res.status(500).json({ message: "Failed to send verification email" });
+    }
+  });
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+    try {
+      // User is already attached to req by the isAuthenticated middleware
+      res.json(req.user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Endpoint to check if user's email is verified
+  app.get('/api/auth/check-verification-status', async (req, res) => {
+    try {
+      const session = req.headers.authorization?.split(' ')[1];
+      
+      if (!session) {
+        return res.status(401).json({ verified: false, message: "Unauthorized" });
+      }
+      
+      // Use Supabase Admin API to get user details
+      const { data: { user }, error } = await supabaseClient.auth.getUser(session);
+      
+      if (error || !user) {
+        console.error("Error getting user for verification check:", error);
+        return res.status(400).json({ verified: false, message: error?.message || "Failed to get user" });
+      }
+      
+      // Check if email is confirmed
+      const verified = user.email_confirmed_at !== null;
+      
+      return res.json({ 
+        verified, 
+        email: user.email,
+        confirmedAt: user.email_confirmed_at 
+      });
+    } catch (error) {
+      console.error("Error checking verification status:", error);
+      return res.status(500).json({ verified: false, message: "Internal server error" });
+    }
+  });
+  
+  // Check if email exists
+  app.get('/api/auth/check-email', async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // First check in our database
+      const existingUser = await storage.getUserByEmail(email);
+      
+      if (existingUser) {
+        return res.status(200).json({ exists: true });
+      }
+      
+      // Since our database check isn't reliable, use a more direct method with Supabase
+      try {
+        // Try to sign in with dummy credentials - if the account exists but password is wrong
+        // we'll get "Invalid login credentials" error
+        const { error } = await supabaseClient.auth.signInWithPassword({
+          email, 
+          password: `ThisIsDefinitelyNotTheRightPassword${Date.now()}`
+        });
+        
+        // If we get Invalid login credentials, the email exists
+        if (error && (
+          error.message.includes("Invalid login credentials") ||
+          error.message.includes("Invalid email") === false // Any error that's not about invalid email
+        )) {
+          return res.status(200).json({ exists: true });
+        }
+        
+        // If we get a specific "user not found" error, then it definitely doesn't exist
+        if (error && (
+          error.message.includes("Email not confirmed") ||
+          error.message.includes("Invalid email")
+        )) {
+          return res.status(200).json({ exists: false });
+        }
+      } catch (authError) {
+        console.error("Error checking auth:", authError);
+        // Continue to conservative approach
+      }
+      
+      // Conservative approach - if we're not sure, say it doesn't exist
+      // so user can try to create a new account
+      return res.status(200).json({ exists: false });
+    } catch (error) {
+      console.error("Error checking email:", error);
+      // Default to false so user can try to sign up
+      return res.status(200).json({ exists: false });
+    }
+  });
+
+  // Pre-signup endpoint - ensure email can be verified
+  app.post('/api/auth/pre-signup', async (req, res) => {
+    try {
+      const { email, firstName, lastName } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      console.log(`[PRE-SIGNUP] Processing pre-signup verification for: ${email}`);
+      
+      // Check if the email is valid before proceeding
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      
+      // Return success - this endpoint is mostly for logging and validation
+      return res.status(200).json({ 
+        message: "Pre-signup check successful",
+        emailVerified: true 
+      });
+    } catch (error) {
+      console.error("[PRE-SIGNUP] Error in pre-signup endpoint:", error);
+      return res.status(500).json({ message: "Failed to process pre-signup check" });
+    }
+  });
+
+  // Supabase Sign Up
+  app.post('/api/auth/signup', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Explicitly configure email confirmation redirect
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          },
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/auth/callback`
+        }
+      });
+      
+      if (error) {
+        console.error("Signup error:", error);
+        
+        // Special handling for rate limit errors
+        if (error.message && error.message.includes("security purposes") || 
+            error.status === 429 || 
+            error.code === 'over_email_send_rate_limit') {
+          return res.status(429).json({ 
+            message: "Rate limit reached. Please wait a minute before trying again or use a different email address." 
+          });
+        }
+        
+        // Special handling for already registered users
+        if (error.message && (
+            error.message.includes("already registered") || 
+            error.message.includes("already exists") ||
+            error.code === "user_already_exists")) {
+          
+          // First try to get the existing user by email
+          const existingUser = await storage.getUserByEmail(email);
+          
+          if (existingUser) {
+            // User exists in our database - return a more specific message
+            return res.status(409).json({ 
+              message: "User already registered",
+              code: "user_already_exists",
+              userExists: true
+            });
+          }
+          
+          // User exists in Supabase but not in our DB
+          return res.status(409).json({ 
+            message: "User already registered", 
+            code: "user_already_exists",
+            userExists: true
+          });
+        }
+        
+        return res.status(400).json({ message: error.message });
+      }
+      
+      // Get user ID from Supabase response
+      const userId = data.user?.id;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "Failed to get user ID from signup response" });
+      }
+      
+      try {
+        // Create a free 30-day trial subscription for the new user
+        // Get the premium plan (should be the 2nd plan created)
+        const plans = await storage.getAllSubscriptionPlans();
+        let trialPlanId = 2; // Default to Premium plan ID
+        
+        // If plans exist, use the Premium plan (which should have isPopular=true)
+        if (plans.length > 0) {
+          const premiumPlan = plans.find(plan => plan.isPopular);
+          if (premiumPlan) {
+            trialPlanId = premiumPlan.id;
+          }
+        }
+        
+        // Calculate end date (30 days from now)
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30); // 30 days trial
+        
+        // Create the free trial subscription
+        await storage.createSubscription({
+          userId,
+          planId: trialPlanId,
+          startDate,
+          endDate,
+          isActive: true
+        });
+        
+        console.log(`Created 30-day free trial subscription for user ${userId}`);
+      } catch (subscriptionError) {
+        console.error("Error creating trial subscription:", subscriptionError);
+        // We still want to return success even if subscription creation fails
+      }
+      
+      // Automatically sign in the user after successful registration
+      const signInResponse = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInResponse.error) {
+        console.error("Auto sign-in error after signup:", signInResponse.error);
+        // Still return success but without session
+        return res.status(201).json({ 
+          message: "Signup successful. You've been given a 30-day free trial! Please sign in to continue.", 
+          user: data.user 
+        });
+      }
+      
+      // Return success with session for automatic login
+      res.status(201).json({ 
+        message: "Signup successful. You've been given a 30-day free trial!", 
+        user: data.user,
+        session: signInResponse.data.session
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
+  });
+  
+  // Supabase Sign In
+  app.post('/api/auth/signin', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        console.error("Signin error:", error);
+        
+        // Special handling for rate limit errors
+        if (error.message && error.message.includes("security purposes") || 
+            error.status === 429 || 
+            error.code === 'too_many_attempts') {
+          return res.status(429).json({ 
+            message: "Too many login attempts. Please wait a moment before trying again." 
+          });
+        }
+        
+        return res.status(401).json({ message: error.message });
+      }
+      
+      res.json({ 
+        message: "Signin successful", 
+        session: data.session,
+        user: data.user
+      });
+    } catch (error) {
+      console.error("Signin error:", error);
+      res.status(500).json({ message: "Failed to sign in" });
+    }
+  });
+  
+  // Supabase Sign Out
+  app.post('/api/auth/signout', async (req, res) => {
+    try {
+      const { error } = await supabaseClient.auth.signOut();
+      
+      if (error) {
+        console.error("Signout error:", error);
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.json({ message: "Signout successful" });
+    } catch (error) {
+      console.error("Signout error:", error);
+      res.status(500).json({ message: "Failed to sign out" });
+    }
+  });
+  
+  // Get current user endpoint for client - required for admin panel access
+  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get the user details from the database
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user data
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      res.status(500).json({ message: "Failed to fetch user data" });
+    }
+  });
+
+  // Games API routes
+  app.get('/api/games', async (req, res) => {
+    try {
+      // Check if date parameter is passed
+      const dateParam = req.query.date as string;
+      // Check for includeTomorrow parameter
+      const includeTomorrowParam = req.query.includeTomorrow as string;
+      const includeTomorrow = includeTomorrowParam === 'true';
+      
+      let date: Date | undefined;
+      
+      if (dateParam) {
+        // Parse date string in YYYY-MM-DD format
+        const [year, month, day] = dateParam.split('-').map(Number);
+        
+        // Create date in Eastern Time (where all games are scheduled)
+        // Setting hours to 12 noon ET to avoid any potential date rollover issues
+        date = new Date(Date.UTC(year, month - 1, day, 16, 0, 0)); // 12 noon ET is 16:00 UTC
+        
+        // Validate date
+        if (isNaN(date.getTime())) {
+          return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
+        }
+        
+        console.log(`Fetching games for date: ${date.toISOString()}, for calendar date: ${month}/${day}/${year}, including tomorrow: ${includeTomorrow}`);
+      }
+      
+      const games = await getAllGames(date, includeTomorrow);
+      res.json(games);
+    } catch (error) {
+      console.error("Error fetching games:", error);
+      res.status(500).json({ message: "Failed to fetch games" });
+    }
+  });
+
+  app.get('/api/games/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const validLeagues = ['nba', 'nfl', 'nhl', 'mlb'];
+      
+      if (!validLeagues.includes(leagueId)) {
+        return res.status(400).json({ message: "Invalid league ID" });
+      }
+      
+      // Check if date parameter is passed
+      const dateParam = req.query.date as string;
+      // Check for includeTomorrow parameter
+      const includeTomorrowParam = req.query.includeTomorrow as string;
+      const includeTomorrow = includeTomorrowParam === 'true';
+      
+      let date: Date | undefined;
+      
+      if (dateParam) {
+        // Parse date string in YYYY-MM-DD format
+        const [year, month, day] = dateParam.split('-').map(Number);
+        
+        // Create date in Eastern Time (where all games are scheduled)
+        // Setting hours to 12 noon ET to avoid any potential date rollover issues
+        date = new Date(Date.UTC(year, month - 1, day, 16, 0, 0)); // 12 noon ET is 16:00 UTC
+        
+        // Validate date
+        if (isNaN(date.getTime())) {
+          return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
+        }
+        console.log(`Fetching ${leagueId} games for date: ${date.toISOString()}, for calendar date: ${month}/${day}/${year}, including tomorrow: ${includeTomorrow}`);
+      }
+      
+      // For league games, we'll gather results from a specific league for today and possibly tomorrow
+      const todayGames = await getLeagueGames(leagueId as any, date);
+      
+      if (!includeTomorrow) {
+        // If we're not including tomorrow's games, just return today's games
+        return res.json(todayGames);
+      }
+      
+      // If includeTomorrow is true, also get tomorrow's games
+      const tomorrow = new Date(date || new Date());
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      console.log(`Also fetching ${leagueId} games for tomorrow: ${tomorrow.toISOString()}`);
+      
+      const tomorrowGames = await getLeagueGames(leagueId as any, tomorrow);
+      
+      // Combine the two sets of games
+      let allGames = [...todayGames, ...tomorrowGames];
+      
+      // Check for upcoming games in our current result set
+      const upcomingGames = allGames.filter(game => game.state === 'pre');
+      
+      // If no upcoming games found for today or tomorrow, search ahead for them
+      if (upcomingGames.length === 0) {
+        console.log(`No upcoming ${leagueId} games found for current dates. Searching for upcoming games in next 7 days.`);
+        
+        // Look ahead up to 7 days to find upcoming games
+        let foundUpcomingGames: Game[] = [];
+        
+        for (let i = 2; i <= 7; i++) {
+          const futureDate = new Date(date || new Date());
+          futureDate.setDate(futureDate.getDate() + i);
+          
+          const futureDateFormatted = new Date(futureDate).toLocaleDateString();
+          console.log(`Looking for upcoming ${leagueId} games on: ${futureDateFormatted}`);
+          
+          const futureGames = await getLeagueGames(leagueId as any, futureDate);
+          
+          // Filter to only get upcoming (pre-game) games
+          const upcomingFutureGames = futureGames.filter(game => game.state === 'pre');
+          
+          // Tag these games as future games for UI handling
+          upcomingFutureGames.forEach(game => {
+            game.isFuture = true;
+          });
+          
+          // If we found upcoming games, add them and stop looking further
+          if (upcomingFutureGames.length > 0) {
+            console.log(`Found ${upcomingFutureGames.length} upcoming ${leagueId} games for ${futureDateFormatted}`);
+            foundUpcomingGames = upcomingFutureGames;
+            break;
+          }
+        }
+        
+        // If we found upcoming games in the future, add them to our allGames array
+        if (foundUpcomingGames.length > 0) {
+          console.log(`Adding ${foundUpcomingGames.length} upcoming future games to the results for ${leagueId}`);
+          allGames = [...allGames, ...foundUpcomingGames];
+        }
+      }
+      
+      // No longer adding test data to league endpoints
+      // Just return the real games directly from the API
+      console.log(`Returning ${allGames.length} games for ${leagueId} directly from ESPN API`);
+      
+      // Ensure all games have correct league field set
+      const gamesWithLeague = allGames.map(game => ({
+        ...game,
+        league: game.league || (leagueId as any)
+      }));
+      
+      res.json(gamesWithLeague);
+    } catch (error) {
+      console.error(`Error fetching ${req.params.leagueId} games:`, error);
+      res.status(500).json({ message: "Failed to fetch league games" });
+    }
+  });
+
+  // Add a debug endpoint to inspect ESPN API data for specific leagues
+  app.get('/api/debug/espn/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const validLeagues = ['nba', 'nfl', 'nhl', 'mlb'];
+      
+      if (!validLeagues.includes(leagueId)) {
+        return res.status(400).json({ message: "Invalid league ID" });
+      }
+      
+      // Get raw data from ESPN API for debugging
+      const data = await getRawESPNData(leagueId as any);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching raw ESPN data:", error);
+      res.status(500).json({ message: "Failed to fetch raw ESPN data", error });
+    }
+  });
+  
+  app.get('/api/game/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      
+      // Always use the ESPN API to dynamically fetch game data by ID
+      const game = await getGameById(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      console.log(`Fetched game data for ID ${gameId}:`, game.homeTeam.name, "vs", game.awayTeam.name);
+      res.json(game);
+    } catch (error) {
+      console.error("Error fetching game:", error);
+      res.status(500).json({ message: "Failed to fetch game" });
+    }
+  });
+  
+  // Debug endpoint for game data without authentication
+  app.get('/api/debug/game/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      
+      // Get raw game data from ESPN API for debugging
+      const game = await getGameById(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      res.json(game);
+    } catch (error) {
+      console.error("Error fetching game data:", error);
+      res.status(500).json({ message: "Failed to fetch game data", error });
+    }
+  });
+  
+  // Debug endpoint to test streams without auth
+  app.get('/api/debug/stream/:gameId', async (req, res) => {
+    try {
+      const { gameId } = req.params;
+      const feed = req.query.feed as string || 'home';
+      
+      // Get stream URL for the game
+      let stream = await storage.getStreamByGameId(gameId);
+      
+      // If no stream exists, try to auto-generate one using the game data and mapping system
+      if (!stream) {
+        try {
+          console.log(`Debug: No existing stream found for game ${gameId}, attempting to auto-generate...`);
+          
+          // Get the game data to extract team names
+          const game = await getGameById(gameId);
+          
+          if (game) {
+            console.log(`Debug: Auto-generating stream for game: ${game.homeTeam.name} vs ${game.awayTeam.name}`);
+            
+            // Use our team name mapping to get stream URLs
+            const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+            
+            console.log(`Debug: Stream mapping results: homeURL=${homeTeamStreamUrl}, awayURL=${awayTeamStreamUrl}`);
+            
+            if (homeTeamStreamUrl || awayTeamStreamUrl) {
+              // Create a new stream entry in the database
+              stream = await storage.createStream({
+                gameId,
+                streamUrl: homeTeamStreamUrl || "",
+                awayStreamUrl: awayTeamStreamUrl || null,
+                isActive: true,
+                addedById: "84721132-c360-4bda-823b-e383baca1c81" // Admin user ID
+              });
+              
+              console.log(`Debug: Successfully auto-generated stream for game ${gameId}`);
+            } else {
+              console.log(`Debug: Could not find stream URLs for game ${gameId} teams (${game.homeTeam.name}, ${game.awayTeam.name})`);
+            }
+          } else {
+            console.log(`Debug: Could not find game data for ID ${gameId}`);
+          }
+        } catch (error) {
+          console.error(`Debug: Error auto-generating stream for game ${gameId}:`, error);
+        }
+      }
+      
+      if (stream) {
+        console.log("Debug: Found stream for game", gameId, "- URL:", stream.streamUrl);
+        console.log("Debug: Away stream URL:", stream.awayStreamUrl);
+        
+        // If away feed is requested and available, return it
+        if (feed === 'away' && stream.awayStreamUrl) {
+          return res.json({ 
+            streamUrl: stream.awayStreamUrl,
+            hasAwayFeed: true,
+            hasHomeFeed: true,
+            currentFeed: 'away'
+          });
+        }
+        
+        // Otherwise return home feed (default)
+        return res.json({ 
+          streamUrl: stream.streamUrl,
+          hasAwayFeed: !!stream.awayStreamUrl,
+          hasHomeFeed: true,
+          currentFeed: 'home'
+        });
+      } else {
+        console.log("Debug: No stream found or generated for game", gameId);
+      }
+      
+      // If still no stream found, return a 404 status with a message
+      return res.status(404).json({ 
+        message: `No stream available for game ID: ${gameId}`,
+        gameId: gameId
+      });
+    } catch (error) {
+      console.error("Error in debug/stream:", error);
+      res.status(500).json({ message: "Failed to fetch stream", error: String(error) });
+    }
+  });
+
+  // Direct streaming is now used - no proxy needed
+  app.get('/api/direct-stream-info', async (req, res) => {
+    try {
+      const streamUrl = req.query.url as string;
+      
+      if (!streamUrl) {
+        return res.status(400).json({ error: "Missing stream URL parameter" });
+      }
+      
+      // Log proxy request
+      console.log(`Stream proxy request for: ${streamUrl}`);
+      
+      try {
+        // Make request to the stream URL
+        const response = await fetch(streamUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://www.hlsplayer.org/',
+            'Origin': 'https://www.hlsplayer.org'
+          }
+        });
+        
+        // Check if the response is OK
+        if (!response.ok) {
+          console.error(`Proxy stream error: ${response.status} ${response.statusText}`);
+          return res.status(response.status).json({ 
+            error: "Failed to fetch stream", 
+            status: response.status,
+            message: response.statusText 
+          });
+        }
+        
+        // Get the content type from the response
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+          res.setHeader('Content-Type', contentType);
+        } else if (streamUrl.endsWith('.m3u8')) {
+          // Force correct content type for m3u8 files
+          res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        }
+        
+        // Set CORS headers to allow access from any origin
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
+        
+        // Check if this is a binary file (like .ts segments)
+        const isBinary = streamUrl.endsWith('.ts') || 
+                         streamUrl.endsWith('.m4s') || 
+                         streamUrl.endsWith('.mp4') || 
+                         streamUrl.endsWith('.aac');
+                         
+        if (isBinary) {
+          // For binary files, pipe the response directly
+          console.log(`Proxying binary data from: ${streamUrl}`);
+          const buffer = await response.arrayBuffer();
+          res.send(Buffer.from(buffer));
+          return;
+        }
+        
+        // For text content, get the stream data
+        let streamData = await response.text();
+        
+        // If this is an m3u8 file and contains references to other files, we need to rewrite those URLs
+        if (streamUrl.endsWith('.m3u8')) {
+          // Get the base URL to rewrite relative paths in the m3u8 file
+          const baseUrl = new URL(streamUrl).href.substring(0, streamUrl.lastIndexOf('/') + 1);
+          
+          // Process each line in the m3u8 file
+          const lines = streamData.split('\n');
+          const processedLines = lines.map(line => {
+            // Skip comments, tags, and empty lines
+            if (line.startsWith('#') || line.trim() === '') {
+              return line;
+            }
+            
+            // If this is a TS file or another segment
+            if (line.endsWith('.ts') || line.endsWith('.m4s') || line.endsWith('.mp4') || line.endsWith('.aac')) {
+              // If it's a relative path, convert to absolute and then to our proxy URL
+              if (!line.startsWith('http')) {
+                const absoluteUrl = new URL(line, baseUrl).href;
+                // For media segments, use direct URLs so the browser can cache them
+                return absoluteUrl;
+              }
+              // If it's already an absolute URL, use it directly
+              return line;
+            }
+            
+            // For m3u8 files, use our proxy
+            if (line.endsWith('.m3u8')) {
+              // If it's a relative path, convert to absolute and then to our proxy URL
+              if (!line.startsWith('http')) {
+                const absoluteUrl = new URL(line, baseUrl).href;
+                return `/api/proxy-stream?url=${encodeURIComponent(absoluteUrl)}`;
+              }
+              // If it's already an absolute URL, just wrap it in our proxy
+              return `/api/proxy-stream?url=${encodeURIComponent(line)}`;
+            }
+            
+            // For any other file type, leave as is
+            return line;
+          });
+          
+          // Replace the original m3u8 content with our processed content
+          streamData = processedLines.join('\n');
+          console.log('Rewrote m3u8 content to use proxy for all referenced files');
+        }
+        
+        // Send the processed data
+        res.send(streamData);
+        
+      } catch (error: any) {
+        console.error('Error proxying stream:', error.message);
+        res.status(500).json({ error: "Failed to proxy stream", message: error.message });
+      }
+    } catch (error: any) {
+      console.error('Stream proxy error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Stream routes
+  app.get('/api/stream/:gameId', async (req, res) => {
+    try {
+      console.log(`Stream request for game ${req.params.gameId}`);
+      const { gameId } = req.params;
+      const feed = req.query.feed as string; // Get the feed preference from query params
+      
+      // Set CORS headers to allow access from any domain
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      
+      // All authentication and domain restrictions have been removed
+      console.log(`Open access enabled: allowing stream access for game ${gameId}`);
+      
+      // Get stream URL for the game
+      let stream = await storage.getStreamByGameId(gameId);
+      
+      // If no stream exists, try to auto-generate one using the game data and mapping system
+      if (!stream) {
+        try {
+          console.log(`No existing stream found for game ${gameId}, attempting to auto-generate...`);
+          
+          // Get the game data to extract team names
+          const game = await getGameById(gameId);
+          
+          if (game) {
+            console.log(`Auto-generating stream for game: ${game.homeTeam.name} vs ${game.awayTeam.name} (${game.league})`);
+            
+            // Use our team name mapping to get stream URLs
+            const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+            
+            // More detailed logging for stream URLs
+            console.log(`Stream mapping results:`);
+            console.log(`- Home team (${game.homeTeam.name}): ${homeTeamStreamUrl ? 
+              homeTeamStreamUrl.substring(0, 50) + '...' : "Not found"}`);
+            console.log(`- Away team (${game.awayTeam.name}): ${awayTeamStreamUrl ? 
+              awayTeamStreamUrl.substring(0, 50) + '...' : "Not found"}`);
+            
+            if (homeTeamStreamUrl || awayTeamStreamUrl) {
+              // Create a new stream entry in the database
+              const defaultAdminId = "84721132-c360-4bda-823b-e383baca1c81"; // Admin user ID as fallback
+              
+              // In development, always use the default admin ID for consistency
+              const creatorId = defaultAdminId;
+              
+              // Create a new stream entry in the database
+              stream = await storage.createStream({
+                gameId,
+                streamUrl: homeTeamStreamUrl || "",
+                awayStreamUrl: awayTeamStreamUrl || null,
+                isActive: true,
+                addedById: creatorId
+              });
+              
+              console.log(`Successfully auto-generated stream for game ${gameId}`);
+            } else {
+              console.log(`Could not find stream URLs for game ${gameId} teams (${game.homeTeam.name}, ${game.awayTeam.name})`);
+            }
+          } else {
+            console.log(`Could not find game data for ID ${gameId}`);
+          }
+        } catch (error) {
+          console.error(`Error auto-generating stream for game ${gameId}:`, error);
+        }
+      }
+      
+      // Now check if we have a stream (either from before or newly generated)
+      if (stream) {
+        console.log(`Debug: Found stream for game ${gameId}:`);
+        console.log(`Debug: Home URL: ${stream.streamUrl ? stream.streamUrl.substring(0, 50) + '...' : 'Not available'}`);
+        console.log(`Debug: Away URL: ${stream.awayStreamUrl ? stream.awayStreamUrl.substring(0, 50) + '...' : 'Not available'}`);
+        console.log(`Debug: Feed requested: ${feed}`);
+        
+        // If away feed is requested and available, return it
+        if (feed === 'away' && stream.awayStreamUrl) {
+          console.log(`Debug: Returning away feed URL for game ${gameId}`);
+          return res.json({ 
+            streamUrl: stream.awayStreamUrl,
+            hasAwayFeed: true,
+            hasHomeFeed: true,
+            currentFeed: 'away'
+          });
+        }
+        
+        // Otherwise return home feed (default)
+        console.log(`Debug: Returning home feed URL for game ${gameId}`);
+        return res.json({ 
+          streamUrl: stream.streamUrl,
+          hasAwayFeed: !!stream.awayStreamUrl,
+          hasHomeFeed: true,
+          currentFeed: 'home'
+        });
+      }
+      
+      // If still no stream found, return 404
+      console.log(`No stream found or generated for game ${gameId}`);
+      return res.status(404).json({ 
+        message: `No stream available for game ID: ${gameId}`,
+        gameId: gameId
+      });
+    } catch (error) {
+      console.error("Error fetching stream:", error);
+      res.status(500).json({ message: "Failed to fetch stream" });
+    }
+  });
+
+  // Admin stream management routes
+  app.get('/api/admin/streams', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const streams = await storage.getAllStreams();
+      res.json(streams);
+    } catch (error) {
+      console.error("Error fetching streams:", error);
+      res.status(500).json({ message: "Failed to fetch streams" });
+    }
+  });
+
+  app.post('/api/admin/streams', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      const streamData = insertStreamSchema.parse({
+        ...req.body,
+        addedById: userId
+      });
+      
+      const stream = await storage.createStream(streamData);
+      res.status(201).json(stream);
+    } catch (error) {
+      console.error("Error creating stream:", error);
+      res.status(500).json({ message: "Failed to create stream" });
+    }
+  });
+
+  app.put('/api/admin/streams/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { streamUrl, awayStreamUrl } = req.body;
+      
+      if (!streamUrl && !awayStreamUrl) {
+        return res.status(400).json({ message: "At least one stream URL is required" });
+      }
+      
+      const updateData: { streamUrl?: string; awayStreamUrl?: string } = {};
+      
+      if (streamUrl) {
+        updateData.streamUrl = streamUrl;
+      }
+      
+      if (awayStreamUrl !== undefined) {
+        updateData.awayStreamUrl = awayStreamUrl;
+      }
+      
+      const stream = await storage.updateStream(parseInt(id), updateData);
+      res.json(stream);
+    } catch (error) {
+      console.error("Error updating stream:", error);
+      res.status(500).json({ message: "Failed to update stream" });
+    }
+  });
+
+  app.delete('/api/admin/streams/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteStream(parseInt(id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting stream:", error);
+      res.status(500).json({ message: "Failed to delete stream" });
+    }
+  });
+  
+  // Stream mapping is now handled automatically by the system when streams are requested
+
+  // Auto-generate stream URLs for a game based on team names
+  app.post('/api/admin/auto-stream', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { gameId } = req.body;
+      
+      if (!gameId) {
+        return res.status(400).json({ message: "Game ID is required" });
+      }
+      
+      // Get the game data to extract team names
+      const game = await getGameById(gameId);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Use our team name mapping to get stream URLs
+      const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+      
+      if (!homeTeamStreamUrl && !awayTeamStreamUrl) {
+        return res.status(404).json({ 
+          message: "Could not find stream URLs for this game's teams",
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name 
+        });
+      }
+      
+      const userId = req.user?.id;
+      
+      // Check if a stream already exists for this game
+      const existingStream = await storage.getStreamByGameId(gameId);
+      
+      if (existingStream) {
+        // Update the existing stream
+        const updatedStream = await storage.updateStream(existingStream.id, {
+          streamUrl: homeTeamStreamUrl || existingStream.streamUrl,
+          awayStreamUrl: awayTeamStreamUrl || existingStream.awayStreamUrl
+        });
+        
+        return res.json({
+          message: "Stream URLs updated automatically",
+          stream: updatedStream,
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name
+        });
+      } else {
+        // Create a new stream
+        const newStream = await storage.createStream({
+          gameId,
+          streamUrl: homeTeamStreamUrl || "",
+          awayStreamUrl: awayTeamStreamUrl || null,
+          isActive: true,
+          addedById: userId
+        });
+        
+        return res.status(201).json({
+          message: "Stream URLs created automatically",
+          stream: newStream,
+          homeTeam: game.homeTeam.name,
+          awayTeam: game.awayTeam.name
+        });
+      }
+    } catch (error) {
+      console.error("Error auto-generating stream URLs:", error);
+      res.status(500).json({ message: "Failed to auto-generate stream URLs", error: String(error) });
+    }
+  });
+  
+  // Stream mapping is now handled automatically by the system when streams are requested
+  
+  // Auto-generate streams for ALL games endpoint with auto cleanup
+  app.post('/api/admin/auto-generate-all-streams', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Get all games for today and tomorrow
+      const allGames = await getAllGames(undefined, true);
+      
+      if (!allGames || allGames.length === 0) {
+        return res.status(404).json({ message: "No games found to create streams for" });
+      }
+      
+      const userId = req.user?.id;
+      let successCount = 0;
+      let failedCount = 0;
+      
+      // Step 1: Process each game and create/update streams
+      for (const game of allGames) {
+        try {
+          // Skip games that are completed (but not postponed or delayed games)
+          if (game.state === 'post') {
+            const detailText = game.status?.detail || '';
+            if (!detailText.includes('Postponed') && !detailText.includes('Delayed')) {
+              continue;
+            }
+          }
+          
+          // Get stream URLs using the streamMapping utility
+          const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+          
+          // Check if a stream already exists for this game
+          const existingStream = await storage.getStreamByGameId(game.id);
+          
+          if (existingStream) {
+            // Update the existing stream if we have new URLs
+            if (homeTeamStreamUrl || awayTeamStreamUrl) {
+              await storage.updateStream(existingStream.id, {
+                streamUrl: homeTeamStreamUrl || existingStream.streamUrl,
+                awayStreamUrl: awayTeamStreamUrl || existingStream.awayStreamUrl
+              });
+              successCount++;
+            }
+          } else {
+            // Create a new stream if we have at least one URL
+            if (homeTeamStreamUrl || awayTeamStreamUrl) {
+              await storage.createStream({
+                gameId: game.id,
+                streamUrl: homeTeamStreamUrl || "",
+                awayStreamUrl: awayTeamStreamUrl || null,
+                isActive: true,
+                addedById: userId
+              });
+              successCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing game ${game.id}:`, error);
+          failedCount++;
+        }
+      }
+      
+      // Step 2: Cleanup old streams
+      // We'll remove streams for games that are:
+      // 1. Older than 2 days
+      // 2. In 'post' state (completed)
+      // 3. Not marked as delayed or postponed
+      
+      let cleanupCount = 0;
+      try {
+        // Get all streams from database
+        const allStreams = await storage.getAllStreams();
+        
+        // Get game IDs from current games to keep
+        const currentGameIds = new Set(allGames.map(game => game.id));
+        
+        // Current date for comparison
+        const now = new Date();
+        
+        // Process each stream
+        for (const stream of allStreams) {
+          try {
+            // If game isn't in current games list, we need to check if it should be removed
+            if (!currentGameIds.has(stream.gameId)) {
+              // Get the game data by ID
+              const gameData = await getGameById(stream.gameId);
+              
+              // If we get game data and it's a completed game (not delayed/postponed)
+              if (gameData) {
+                // Parse game date
+                const gameDate = new Date(gameData.date);
+                
+                // Calculate days since game
+                const daysSinceGame = Math.floor((now.getTime() - gameDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                // Check if game is completed and older than 2 days
+                if (gameData.state === 'post' && daysSinceGame > 2) {
+                  const gameDetailText = gameData.status?.detail || '';
+                  
+                  // Verify it's not a postponed or delayed game
+                  if (!gameDetailText.includes('Postponed') && !gameDetailText.includes('Delayed')) {
+                    // Delete the stream
+                    await storage.deleteStream(stream.id);
+                    cleanupCount++;
+                  }
+                }
+              } else {
+                // If game data not found, assume it's an old game and remove the stream
+                await storage.deleteStream(stream.id);
+                cleanupCount++;
+              }
+            }
+          } catch (error) {
+            console.error(`Error cleaning up stream ${stream.id}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error("Error during stream cleanup:", error);
+      }
+      
+      return res.status(200).json({
+        message: "Auto-generation of stream URLs completed with cleanup",
+        results: {
+          totalGames: allGames.length,
+          success: successCount,
+          failed: failedCount,
+          cleanedUp: cleanupCount
+        }
+      });
+    } catch (error) {
+      console.error("Error in auto-generate-all-streams:", error);
+      res.status(500).json({ message: "Failed to auto-generate stream URLs", error: String(error) });
+    }
+  });
+  
+  // Admin user management routes
+  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  // Delete user endpoint - removes user from both our database and Supabase
+  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      console.log(`[USER DELETION] Admin initiated deletion of user ID: ${id}`);
+      
+      // First, get the user details so we have their email for confirmation
+      const userToDelete = await storage.getUser(id);
+      
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      console.log(`[USER DELETION] Deleting user: ${userToDelete.email}`);
+      
+      // 1. Delete user subscriptions first to avoid foreign key constraints
+      try {
+        await storage.deleteSubscriptionsByUserId(id);
+        console.log(`[USER DELETION] Removed user subscriptions: ${id}`);
+      } catch (subError) {
+        console.error(`[USER DELETION] Error removing subscriptions:`, subError);
+        // Continue with deletion even if subscriptions can't be removed
+      }
+      
+      // 2. Delete the user from our application database
+      await storage.deleteUser(id);
+      console.log(`[USER DELETION] Removed user from application database: ${id}`);
+      
+      // 3. Delete the user from Supabase Auth using direct database connection
+      // This is more reliable than the admin API which might have permission limitations
+      try {
+        // We'll use the DATABASE_URL to connect directly to Supabase's Postgres database
+        if (process.env.DATABASE_URL) {
+          console.log(`[USER DELETION] Using direct database connection for user ${id}`);
+          
+          // Use node-postgres to connect directly
+          const { Pool } = require('pg');
+          const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+          });
+          
+          // Delete the user from auth.users table
+          await pool.query('DELETE FROM auth.users WHERE id = $1', [id]);
+          
+          // Close the connection
+          await pool.end();
+          
+          console.log(`[USER DELETION] Successfully deleted user from Supabase database using direct SQL: ${id}`);
+        } else {
+          // Fallback to using the admin API if DATABASE_URL is not available
+          try {
+            const { error } = await supabaseClient.auth.admin.deleteUser(id);
+            if (error) {
+              console.error(`[USER DELETION] Supabase auth deletion error:`, error);
+              // Don't return here - we want to send success message for the app database deletion
+            } else {
+              console.log(`[USER DELETION] Successfully deleted user from Supabase Auth: ${id}`);
+            }
+          } catch (authError) {
+            console.error(`[USER DELETION] Supabase auth API error:`, authError);
+            // Continue execution - at least app database was updated
+          }
+        }
+      } catch (sqlError) {
+        console.error(`[USER DELETION] SQL deletion error:`, sqlError);
+        // Don't return error - we want to send success message for the app database deletion
+      }
+      
+      // Always return success for the frontend as we've at least deleted from our app database
+      return res.status(200).json({ 
+        message: `User ${userToDelete.email} has been deleted successfully`,
+        success: true 
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user", error: String(error) });
+    }
+  });
+
+  app.get('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.put('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, email, isAdmin: setAdmin } = req.body;
+      
+      // Get existing user
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update user in database
+      const updatedUser = await storage.updateUser(id, {
+        firstName: firstName || existingUser.firstName,
+        lastName: lastName || existingUser.lastName,
+        email: email || existingUser.email,
+        isAdmin: setAdmin !== undefined ? setAdmin : existingUser.isAdmin
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if user exists
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Prevent deletion of system/admin user
+      if (id === 'system') {
+        return res.status(403).json({ message: "Cannot delete system user" });
+      }
+      
+      // Delete user's subscriptions first
+      await storage.deleteSubscriptionsByUserId(id);
+      
+      // Delete the user
+      await storage.deleteUser(id);
+      
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Admin subscription plan management routes
+  app.get('/api/admin/subscription-plans', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const plans = await storage.getAllSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  app.post('/api/admin/subscription-plans', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, price, description, durationDays, features } = req.body;
+      
+      if (!name || !price || !durationDays) {
+        return res.status(400).json({ message: "Name, price and duration are required" });
+      }
+      
+      const plan = await storage.createSubscriptionPlan({
+        name,
+        price: parseInt(price),
+        description,
+        durationDays: parseInt(durationDays),
+        features: features || []
+      });
+      
+      res.status(201).json(plan);
+    } catch (error) {
+      console.error("Error creating subscription plan:", error);
+      res.status(500).json({ message: "Failed to create subscription plan" });
+    }
+  });
+
+  app.put('/api/admin/subscription-plans/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, price, description, durationDays, features } = req.body;
+      
+      const plan = await storage.updateSubscriptionPlan(parseInt(id), {
+        name,
+        price: price ? parseInt(price) : undefined,
+        description,
+        durationDays: durationDays ? parseInt(durationDays) : undefined,
+        features
+      });
+      
+      res.json(plan);
+    } catch (error) {
+      console.error("Error updating subscription plan:", error);
+      res.status(500).json({ message: "Failed to update subscription plan" });
+    }
+  });
+
+  app.delete('/api/admin/subscription-plans/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSubscriptionPlan(parseInt(id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting subscription plan:", error);
+      res.status(500).json({ message: "Failed to delete subscription plan" });
+    }
+  });
+  
+  // Admin subscription management routes
+  app.get('/api/admin/subscriptions', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllSubscriptions();
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+  
+  app.put('/api/admin/subscriptions/:id', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive, endDate } = req.body;
+      
+      const subscription = await storage.adminUpdateSubscription(parseInt(id), {
+        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined
+      });
+      
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+      res.status(500).json({ message: "Failed to update subscription" });
+    }
+  });
+
+
+
+  // Subscription plans routes
+  app.get('/api/subscription-plans', async (req, res) => {
+    try {
+      const plans = await storage.getAllSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  app.get('/api/subscription', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const subscription = await storage.getSubscriptionByUserId(userId);
+      res.json(subscription || null);
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post('/api/subscription', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      // Get the selected plan
+      const { planId } = req.body;
+      
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+      
+      // Calculate end date based on plan duration
+      const plans = await storage.getAllSubscriptionPlans();
+      const selectedPlan = plans.find(plan => plan.id === parseInt(planId));
+      
+      if (!selectedPlan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      const startDate = new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + selectedPlan.durationDays);
+      
+      // Create subscription record
+      const subscriptionData = insertSubscriptionSchema.parse({
+        userId,
+        planId: parseInt(planId),
+        startDate,
+        endDate,
+        isActive: true
+      });
+      
+      const subscription = await storage.createSubscription(subscriptionData);
+      res.status(201).json(subscription);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  app.post('/api/subscription/cancel', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const subscription = await storage.getSubscriptionByUserId(userId);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "No active subscription found" });
+      }
+      
+      await storage.cancelSubscription(subscription.id);
+      res.status(200).json({ message: "Subscription canceled successfully" });
+    } catch (error) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+  
+  // Endpoint to automatically generate streams for all of today's games
+  app.post('/api/admin/auto-generate-all-streams', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Get all games for today
+      const today = new Date();
+      const allGames = await getAllGames(today);
+      
+      if (!allGames || allGames.length === 0) {
+        return res.status(404).json({ 
+          message: "No games found for today", 
+          date: today.toISOString() 
+        });
+      }
+      
+      const results = {
+        totalGames: allGames.length,
+        success: 0,
+        failed: 0,
+        gamesProcessed: [] as any[]
+      };
+      
+      const userId = req.user?.id;
+      
+      // Process each game
+      for (const game of allGames) {
+        try {
+          // Use our team name mapping to get stream URLs
+          const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+          
+          // Check if streams were found
+          const streamsFound = !!homeTeamStreamUrl || !!awayTeamStreamUrl;
+          
+          // Check if a stream already exists for this game
+          const existingStream = await storage.getStreamByGameId(game.id);
+          
+          let streamResult;
+          
+          if (existingStream) {
+            // Only update if streams were found
+            if (streamsFound) {
+              // Update the existing stream
+              streamResult = await storage.updateStream(existingStream.id, {
+                streamUrl: homeTeamStreamUrl || existingStream.streamUrl,
+                awayStreamUrl: awayTeamStreamUrl || existingStream.awayStreamUrl
+              });
+            } else {
+              streamResult = existingStream;
+            }
+          } else if (streamsFound) {
+            // Create a new stream only if streams were found
+            streamResult = await storage.createStream({
+              gameId: game.id,
+              streamUrl: homeTeamStreamUrl || "",
+              awayStreamUrl: awayTeamStreamUrl || null,
+              isActive: true,
+              addedById: userId
+            });
+          }
+          
+          results.gamesProcessed.push({
+            id: game.id,
+            name: game.name,
+            homeTeam: game.homeTeam.name,
+            awayTeam: game.awayTeam.name,
+            homeStreamFound: !!homeTeamStreamUrl,
+            awayStreamFound: !!awayTeamStreamUrl,
+            status: streamResult ? 'success' : 'no_streams_found'
+          });
+          
+          if (streamResult) {
+            results.success++;
+          } else {
+            results.failed++;
+          }
+        } catch (error) {
+          console.error(`Error processing game ${game.id}:`, error);
+          results.failed++;
+          results.gamesProcessed.push({
+            id: game.id,
+            name: game.name,
+            status: 'error',
+            error: String(error)
+          });
+        }
+      }
+      
+      return res.json({
+        message: `Processed ${results.totalGames} games: ${results.success} succeeded, ${results.failed} failed`,
+        results
+      });
+    } catch (error) {
+      console.error("Error auto-generating all stream URLs:", error);
+      return res.status(500).json({ 
+        message: "Failed to auto-generate stream URLs", 
+        error: String(error) 
+      });
+    }
+  });
+  
+  // Automatic stream update endpoint that can be called by a cron job
+  app.post('/api/auto-update-streams', async (req, res) => {
+    try {
+      const apiKey = req.headers['x-api-key'];
+      
+      // Simple API key check to protect this endpoint
+      if (apiKey !== process.env.AUTO_UPDATE_API_KEY) {
+        return res.status(401).json({ message: "Invalid API key" });
+      }
+      
+      // Get all games for today
+      const today = new Date();
+      const allGames = await getAllGames(today);
+      
+      if (!allGames || allGames.length === 0) {
+        return res.status(404).json({ 
+          message: "No games found for today", 
+          date: today.toISOString() 
+        });
+      }
+      
+      const results = {
+        totalGames: allGames.length,
+        success: 0,
+        failed: 0,
+        created: 0,
+        updated: 0,
+        unchanged: 0
+      };
+      
+      // Process each game
+      for (const game of allGames) {
+        try {
+          // Use our team name mapping to get stream URLs
+          const { homeTeamStreamUrl, awayTeamStreamUrl } = getStreamUrlsForGame(game);
+          
+          // Check if streams were found
+          const streamsFound = !!homeTeamStreamUrl || !!awayTeamStreamUrl;
+          
+          // Check if a stream already exists for this game
+          const existingStream = await storage.getStreamByGameId(game.id);
+          
+          if (existingStream) {
+            // Only update if streams were found
+            if (streamsFound) {
+              // Check if there are changes before updating
+              const needsUpdate = 
+                (homeTeamStreamUrl && homeTeamStreamUrl !== existingStream.streamUrl) || 
+                (awayTeamStreamUrl && awayTeamStreamUrl !== existingStream.awayStreamUrl);
+                
+              if (needsUpdate) {
+                // Update the existing stream with new URLs
+                await storage.updateStream(existingStream.id, {
+                  streamUrl: homeTeamStreamUrl || existingStream.streamUrl,
+                  awayStreamUrl: awayTeamStreamUrl || existingStream.awayStreamUrl
+                });
+                results.updated++;
+              } else {
+                results.unchanged++;
+              }
+            } else {
+              results.unchanged++;
+            }
+          } else if (streamsFound) {
+            // Create a new stream only if streams were found
+            await storage.createStream({
+              gameId: game.id,
+              streamUrl: homeTeamStreamUrl || "",
+              awayStreamUrl: awayTeamStreamUrl || null,
+              isActive: true,
+              // Use the first admin user ID as creator
+              addedById: "system-auto-update"
+            });
+            results.created++;
+          } else {
+            results.unchanged++;
+          }
+          
+          results.success++;
+        } catch (error) {
+          console.error(`Error processing game ${game.id}:`, error);
+          results.failed++;
+        }
+      }
+      
+      return res.json({
+        message: `Auto-update complete. Processed ${results.totalGames} games.`,
+        stats: `${results.created} created, ${results.updated} updated, ${results.unchanged} unchanged, ${results.failed} failed.`,
+        results
+      });
+    } catch (error) {
+      console.error("Error in auto-update streams:", error);
+      return res.status(500).json({ 
+        message: "Failed to auto-update streams", 
+        error: String(error) 
+      });
+    }
+  });
+  
+  // Admin - get active users
+  app.get("/api/admin/active-users", isAuthenticated, isAdmin, (req, res) => {
+    try {
+      const activeUsers = getActiveUsers();
+      res.json(activeUsers);
+    } catch (error) {
+      console.error("Error getting active users:", error);
+      res.status(500).json({ error: "Failed to get active users" });
+    }
+  });
+  
+  // Email - send welcome email
+  app.post("/api/email/welcome", (req: any, res) => {
+    try {
+      // Create a public endpoint for testing
+      const { email, displayName } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      // Use the imported function from the top of the file
+      handleWelcomeEmail(email, displayName || email.split('@')[0])
+        .then((result: any) => {
+          if (result.success) {
+            return res.json({ success: true, message: "Welcome email sent successfully" });
+          } else {
+            return res.status(500).json({ error: "Failed to send welcome email", details: result.error });
+          }
+        })
+        .catch((error: any) => {
+          console.error("Error sending welcome email:", error);
+          return res.status(500).json({ error: "Failed to send welcome email" });
+        });
+    } catch (error) {
+      console.error("Error in welcome email endpoint:", error);
+      return res.status(500).json({ error: "Failed to process welcome email request" });
+    }
+  });
+  
+  // Email - send subscription expiration notification
+  app.post("/api/email/subscription-expiration", isAuthenticated, (req: any, res) => {
+    try {
+      const { email, displayName, daysRemaining } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      if (!daysRemaining || isNaN(daysRemaining)) {
+        return res.status(400).json({ error: "Valid daysRemaining is required" });
+      }
+      
+      // Use the user's own email and name if not specified
+      const targetEmail = email || req.user.email;
+      const targetName = displayName || req.user.firstName || req.user.email;
+      
+      // Import from emailService.ts
+      const { handleSubscriptionExpirationEmail } = require('./emailService');
+      
+      handleSubscriptionExpirationEmail(targetEmail, targetName, daysRemaining)
+        .then((result: any) => {
+          if (result.success) {
+            return res.json({ success: true, message: "Subscription expiration email sent successfully" });
+          } else {
+            return res.status(500).json({ error: "Failed to send subscription expiration email", details: result.error });
+          }
+        })
+        .catch((error: any) => {
+          console.error("Error sending subscription expiration email:", error);
+          return res.status(500).json({ error: "Failed to send subscription expiration email" });
+        });
+    } catch (error) {
+      console.error("Error in subscription expiration email endpoint:", error);
+      return res.status(500).json({ error: "Failed to process subscription expiration email request" });
+    }
+  });
+  
+  // Email - send game alert
+  app.post("/api/email/game-alert", isAuthenticated, (req: any, res) => {
+    try {
+      const { email, displayName, gameDetails } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      if (!gameDetails || !gameDetails.homeTeam || !gameDetails.awayTeam || !gameDetails.time || !gameDetails.league) {
+        return res.status(400).json({ error: "Complete game details are required" });
+      }
+      
+      // Use the user's own email and name if not specified
+      const targetEmail = email || req.user.email;
+      const targetName = displayName || req.user.firstName || req.user.email;
+      
+      // Import from emailService.ts
+      const { handleGameAlertEmail } = require('./emailService');
+      
+      handleGameAlertEmail(targetEmail, targetName, gameDetails)
+        .then((result: any) => {
+          if (result.success) {
+            return res.json({ success: true, message: "Game alert email sent successfully" });
+          } else {
+            return res.status(500).json({ error: "Failed to send game alert email", details: result.error });
+          }
+        })
+        .catch((error: any) => {
+          console.error("Error sending game alert email:", error);
+          return res.status(500).json({ error: "Failed to send game alert email" });
+        });
+    } catch (error) {
+      console.error("Error in game alert email endpoint:", error);
+      return res.status(500).json({ error: "Failed to process game alert email request" });
+    }
+  });
+  
+  // Email - send test email (admin only)
+  app.post("/api/admin/email/test", isAuthenticated, isAdmin, (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      // Import from emailService.ts
+      const { handleTestEmail } = require('./emailService');
+      
+      handleTestEmail(email)
+        .then((result: any) => {
+          if (result.success) {
+            return res.json({ success: true, message: "Test email sent successfully" });
+          } else {
+            return res.status(500).json({ error: "Failed to send test email", details: result.error });
+          }
+        })
+        .catch((error: any) => {
+          console.error("Error sending test email:", error);
+          return res.status(500).json({ error: "Failed to send test email" });
+        });
+    } catch (error) {
+      console.error("Error in test email endpoint:", error);
+      return res.status(500).json({ error: "Failed to process test email request" });
+    }
+  });
+
+  // User activity tracking middleware for authenticated requests
+  app.use((req: any, res, next) => {
+    if (req.user) {
+      // Extract current page from referer
+      let currentPage = "Home";
+      if (req.headers.referer) {
+        try {
+          const url = new URL(req.headers.referer);
+          currentPage = url.pathname === "/" ? "Home" : url.pathname.replace(/^\//, "").split("/")[0];
+          // Capitalize first letter
+          currentPage = currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
+        } catch (e) {
+          // If URL parsing fails, use path
+          currentPage = req.path.replace(/^\/api\//, "").split("/")[0] || "Home";
+          currentPage = currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
+        }
+      }
+      
+      // Track user activity
+      trackUserActivity(req.user.id, {
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        email: req.user.email,
+        ip: req.ip,
+        currentPage
+      });
+    }
+    next();
+  });
+
+  // Start the cleanup interval for inactive users
+  startCleanupInterval();
+  
+  // Set up auth verification callback route
+  app.get('/auth/callback', (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      // If no code is provided, redirect to login with error
+      if (!code) {
+        return res.redirect('/login?error=missing_code');
+      }
+      
+      console.log(`Auth callback received with code: ${String(code).substring(0, 5)}...`);
+      
+      // Redirect to the client-side auth callback page
+      res.redirect(`/auth-callback?code=${code}`);
+    } catch (error: any) {
+      console.error('Auth callback error:', error.message);
+      res.redirect('/login?error=verification_failed');
+    }
+  });
+
+  const httpServer = createServer(app);
+  
+  return httpServer;
+}

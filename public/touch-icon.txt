@@ -1,0 +1,1 @@
+This is a placeholder for the apple-touch-icon.png file. In a production environment, we would generate a 180x180 PNG with the VeloPlay logo.

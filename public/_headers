@@ -1,0 +1,17 @@
+# Headers for Vercel deployment
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer-when-downgrade
+
+# JS files
+/*.js
+  Content-Type: application/javascript
+
+# CSS files
+/*.css
+  Content-Type: text/css
+
+# JSON files
+/*.json
+  Content-Type: application/json

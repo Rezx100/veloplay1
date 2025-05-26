@@ -1,0 +1,503 @@
+import React, { useState, useEffect } from 'react';
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle as AlertCircleIcon, Edit, Save } from "lucide-react";
+
+// Stream source interface
+interface StreamSource {
+  id: number;
+  name: string;
+  teamName: string;
+  url: string;
+  leagueId: string;
+  isActive: boolean;
+  priority: number;
+  description?: string;
+}
+
+export default function AllStreamSourcesPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [streamSources, setStreamSources] = useState<StreamSource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeague, setSelectedLeague] = useState<string>('all');
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editSource, setEditSource] = useState<StreamSource | null>(null);
+  const [editedUrl, setEditedUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // League color classes for badges
+  const leagueColorClasses: Record<string, string> = {
+    'nhl': 'bg-blue-100 text-blue-800',
+    'nba': 'bg-red-100 text-red-800',
+    'nfl': 'bg-green-100 text-green-800',
+    'mlb': 'bg-yellow-100 text-yellow-800',
+    'other': 'bg-purple-100 text-purple-800'
+  };
+
+  // Filter stream sources based on search and league selection
+  const filteredSources = streamSources.filter(source => {
+    // Filter by league
+    if (selectedLeague !== 'all' && source.leagueId !== selectedLeague) {
+      return false;
+    }
+    
+    // Filter by search query
+    if (searchQuery && 
+        !source.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !source.teamName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !source.url.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Fetch all stream sources
+  const fetchAllStreamSources = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/all-streams');
+      if (!response.ok) {
+        throw new Error('Failed to fetch stream sources');
+      }
+      
+      const data = await response.json();
+      setStreamSources(data);
+      setHasError(false);
+      
+      toast({
+        title: "Success",
+        description: `Loaded ${data.length} stream sources with team names`,
+      });
+    } catch (error) {
+      console.error('Error fetching all stream sources:', error);
+      setHasError(true);
+      toast({
+        title: "Error",
+        description: "Failed to load stream sources with team names",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle copying URL to clipboard
+  const copyUrlToClipboard = (url: string, id: number) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id);
+      
+      toast({
+        title: "Success",
+        description: "Stream URL copied to clipboard",
+      });
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
+    });
+  };
+  
+  // Handle opening the edit dialog
+  const handleOpenEditDialog = (source: StreamSource) => {
+    setEditSource(source);
+    setEditedUrl(source.url);
+    setEditDialogOpen(true);
+  };
+
+  // Handle closing the edit dialog
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditSource(null);
+    setEditedUrl('');
+  };
+
+  // Handle saving the edited URL
+  const handleSaveUrl = async () => {
+    if (!editSource) return;
+    
+    setIsSaving(true);
+    
+    try {
+      // Make sure the URL is valid
+      if (!editedUrl.trim()) {
+        toast({
+          title: "Invalid URL",
+          description: "Please enter a valid stream URL.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+      
+      // Update the stream source URL using the direct stream URL endpoint
+      console.log(`Sending update for stream ID ${editSource.id} with new URL: ${editedUrl}`);
+      
+      // Use the new API endpoint for direct stream URL updates
+      const response = await fetch(`/api/direct-stream-url/${editSource.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: editedUrl }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from server:', errorText);
+        throw new Error('Failed to update stream URL');
+      }
+      
+      const updatedSource = await response.json();
+      console.log('Stream URL update successful:', updatedSource);
+      
+      // Update the local state with the updated source
+      setStreamSources(prevSources => 
+        prevSources.map(source => 
+          source.id === editSource.id ? updatedSource : source
+        )
+      );
+      
+      // Show success message
+      toast({
+        title: "URL Updated",
+        description: `Stream URL for ${editSource.teamName} has been updated successfully.`,
+      });
+      
+      // Invalidate the query cache to refresh all data
+      queryClient.invalidateQueries({ queryKey: ['/api/games'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/all-streams'] });
+      
+      // Close the dialog
+      handleCloseEditDialog();
+    } catch (error) {
+      console.error('Error updating stream URL:', error);
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating the stream URL. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Initialize the stream sources table
+  const [isInitializing, setIsInitializing] = useState(false);
+  
+  const initializeStreamSources = async () => {
+    setIsInitializing(true);
+    
+    try {
+      const response = await fetch('/api/init-stream-sources', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        toast({
+          title: "Stream Sources Initialized",
+          description: `Successfully initialized stream sources database with sample data.`,
+        });
+        
+        // Refresh the data
+        fetchAllStreamSources();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to initialize stream sources');
+      }
+    } catch (error) {
+      console.error('Error initializing stream sources:', error);
+      toast({
+        title: "Initialization Failed",
+        description: error instanceof Error ? error.message : "There was an error initializing stream sources. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  // Initialize by fetching data
+  useEffect(() => {
+    fetchAllStreamSources();
+  }, []);
+
+  return (
+    <div className="w-full space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">All Stream Sources ({filteredSources.length} of {streamSources.length})</h3>
+        <div className="flex space-x-2">
+          {streamSources.length === 0 && (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={initializeStreamSources}
+              disabled={isInitializing}
+            >
+              {isInitializing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Initializing...
+                </>
+              ) : (
+                'Initialize Stream Sources'
+              )}
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={fetchAllStreamSources}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Refresh'
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {hasError && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            There was an error loading stream sources.
+            Please try again or contact support if the issue persists.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="space-y-6">
+        {/* League filters */}
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant={selectedLeague === 'all' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('all')}
+          >
+            All
+          </Button>
+          <Button 
+            variant={selectedLeague === 'nhl' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('nhl')}
+          >
+            NHL
+          </Button>
+          <Button 
+            variant={selectedLeague === 'nfl' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('nfl')}
+          >
+            NFL
+          </Button>
+          <Button 
+            variant={selectedLeague === 'nba' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('nba')}
+          >
+            NBA
+          </Button>
+          <Button 
+            variant={selectedLeague === 'mlb' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('mlb')}
+          >
+            MLB
+          </Button>
+          <Button 
+            variant={selectedLeague === 'other' ? 'default' : 'outline'} 
+            size="sm" 
+            onClick={() => setSelectedLeague('other')}
+          >
+            Special Channels
+          </Button>
+        </div>
+        
+        {/* Search input */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search teams or channels..."
+            className="w-full px-4 py-2 border rounded-md"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        {loading ? (
+          <div className="w-full flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredSources.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No stream sources found matching your filters.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 border rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team/Channel</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">League</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stream URL</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSources.map((source) => (
+                  <tr key={source.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {source.id}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <div className="text-sm font-medium text-gray-900">{source.name}</div>
+                        <div className="text-sm text-gray-500">{source.teamName}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${leagueColorClasses[source.leagueId] || 'bg-gray-100 text-gray-800'}`}>
+                        {source.leagueId.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 max-w-md">
+                      <div className="text-sm text-blue-600 break-all">
+                        {source.url}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex gap-2 justify-end">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => copyUrlToClipboard(source.url, source.id)}
+                        >
+                          {copiedId === source.id ? 'Copied!' : 'Copy URL'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenEditDialog(source)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      
+      {/* Edit Stream URL Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Stream URL</DialogTitle>
+            <DialogDescription>
+              Update the stream URL for {editSource?.teamName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="teamName" className="text-right">
+                Team
+              </Label>
+              <div id="teamName" className="col-span-3 font-medium">
+                {editSource?.teamName}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="currentUrl" className="text-right">
+                Current URL
+              </Label>
+              <div id="currentUrl" className="col-span-3 text-sm text-muted-foreground break-all">
+                {editSource?.url}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newUrl" className="text-right">
+                New URL
+              </Label>
+              <Input
+                id="newUrl"
+                className="col-span-3"
+                placeholder="Enter new stream URL..."
+                value={editedUrl}
+                onChange={(e) => setEditedUrl(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={handleCloseEditDialog}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSaveUrl}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,0 +1,121 @@
+Here’s a **production-level prompt** you can send directly to **Replit AI agent** to **permanently fix the broken email verification and access enforcement system** on VeloPlay:
+
+---
+
+**📌 PROMPT FOR REPLIT AI: Permanent Fix for Email Verification & Auto-Login Vulnerability in VeloPlay**
+
+---
+
+🎯 **Goal**:
+Enforce proper **email verification before allowing access** to any content, and prevent **auto-login** after signup or email verification. Fix this completely on both **client and server sides**.
+
+---
+
+### ✅ **WHAT NEEDS TO BE FIXED**
+
+1. **Newly created accounts auto-login** before email is verified → this must be blocked.
+2. **Unverified users can access premium routes/content** → must be blocked fully.
+3. **Client-side relies on `localStorage` for `email_verified`** → insecure, must be removed.
+4. **PrivateRoute and API endpoints must validate `isVerified`** strictly and consistently.
+5. **Users must be forced to log in manually after email verification**.
+
+---
+
+### 🔐 **HOW TO FIX (DO ALL OF THESE)**
+
+#### ✅ 1. Prevent Auto-Login on Signup
+
+* **Current issue**: `supabase.auth.signUp()` is followed by auto-session creation.
+* **Fix**:
+
+  * After `signUp()`, do **not** store session.
+  * Redirect user to `/verify-email` with message.
+  * Only allow login after manual input of credentials *and* verification is confirmed.
+
+#### ✅ 2. Force Manual Login After Email Verification
+
+* **Fix the auth callback**:
+
+  * In `/api/auth/callback` or wherever Supabase processes `exchangeCodeForSession`, **do NOT log user in.**
+  * Instead, just mark the email as verified (if needed) and redirect to `/login?verified=1`.
+
+```ts
+// After email verified:
+await supabase.auth.signOut(); // Force no session
+res.redirect('/login?verified=1');
+```
+
+---
+
+#### ✅ 3. Enforce Page-Level Lock via `PrivateRoute`
+
+* **In `PrivateRoute.tsx`**:
+
+  * Check both:
+
+    * `user !== null`
+    * `user.isVerified === true`
+  * If not verified:
+
+    * Redirect to `/verify-email`
+    * Block rendering of any protected content
+
+---
+
+#### ✅ 4. Enforce Server-Side Protection
+
+* **In all `/api/*` endpoints**, before doing anything:
+
+```ts
+const user = await getUserFromToken(req); // decode JWT
+if (!user || !user.isVerified) {
+  return res.status(403).json({ error: "Email not verified" });
+}
+```
+
+---
+
+#### ✅ 5. Remove Insecure Logic
+
+* Completely remove from all files:
+
+```ts
+localStorage.setItem('email_verified', 'true');
+```
+
+* Replace with:
+
+  * A real-time check to backend `/api/user/me`
+  * Use server truth, not cached frontend data
+
+---
+
+#### ✅ 6. Fix Supabase Middleware
+
+* Ensure the **`isAuthenticated` middleware** does this:
+
+  * Verifies JWT token
+  * Fetches user from Supabase
+  * Cross-references local DB (`users`) for `isVerified === true`
+  * Fails early with 403 if not verified
+
+---
+
+### 🛡️ Final Test Cases (Must Pass)
+
+* [ ] User creates account → gets email → cannot login/access until verified
+* [ ] User tries to access `/game/:id` while unverified → redirected to `/verify-email`
+* [ ] Verified user logs in → accesses all content
+* [ ] Admin user always has access
+* [ ] No auto-login via magic links or email verification callback
+* [ ] All `/api/*` routes reject unverified users
+
+---
+
+Please treat this as a **high-priority security issue**. The platform should never allow unverified users to browse or stream premium content under any condition.
+
+✅ Once complete, confirm by creating a new user and ensuring all access is denied until they verify their email and log in manually.
+
+---
+
+Let me know if you also want a database constraint to enforce this at the DB level too.

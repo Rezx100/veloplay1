@@ -1,0 +1,35 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#332200"/>
+      <stop offset="100%" stop-color="#553300"/>
+    </linearGradient>
+    <radialGradient id="field" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#44aa22" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#227700" stop-opacity="0.5"/>
+    </radialGradient>
+    <radialGradient id="infield" cx="50%" cy="65%" r="30%" fx="50%" fy="65%">
+      <stop offset="0%" stop-color="#cc9944" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#bb7722" stop-opacity="0.5"/>
+    </radialGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <circle cx="400" cy="300" r="250" fill="url(#field)" stroke="#ffffff" stroke-width="5"/>
+  
+  <!-- Diamond and bases -->
+  <path d="M 400,200 L 300,300 L 400,400 L 500,300 Z" fill="url(#infield)" stroke="#ffffff" stroke-width="3"/>
+  <rect x="395" y="195" width="10" height="10" fill="white" stroke="#000000" stroke-width="1"/>
+  <rect x="295" y="295" width="10" height="10" fill="white" stroke="#000000" stroke-width="1"/>
+  <rect x="395" y="395" width="10" height="10" fill="white" stroke="#000000" stroke-width="1"/>
+  <rect x="495" y="295" width="10" height="10" fill="white" stroke="#000000" stroke-width="1"/>
+  
+  <!-- Pitchers mound -->
+  <circle cx="400" cy="300" r="10" fill="#aa8844" stroke="#ffffff" stroke-width="1"/>
+  
+  <!-- Outfield lines -->
+  <line x1="400" y1="200" x2="200" y2="100" stroke="#ffffff" stroke-width="2"/>
+  <line x1="400" y1="200" x2="600" y2="100" stroke="#ffffff" stroke-width="2"/>
+  
+  <text x="400" y="100" font-family="Arial" font-size="30" fill="#ffffff" text-anchor="middle">MLB BASEBALL</text>
+  <text x="400" y="520" font-family="Arial" font-size="18" fill="#ffffff" text-anchor="middle">FIELD OF DREAMS</text>
+</svg>
