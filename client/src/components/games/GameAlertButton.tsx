@@ -92,15 +92,8 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       try {
         console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the proper API endpoint with authentication and cache busting
-        const response = await fetch(`/api/game-alerts/${gameId}?t=${Date.now()}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'include',
-        });
+        // Use the apiRequest helper for proper authentication
+        const response = await apiRequest('GET', `/api/game-alerts/${gameId}?t=${Date.now()}`);
 
         if (response.ok) {
           const result = await response.json();
