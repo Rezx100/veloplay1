@@ -9,7 +9,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { supabase } from '../db';
+import { storage } from '../neonStorage';
 
 // Constants for stream URL patterns
 export const OLD_DOMAIN = 'vp.pixelsport.to';

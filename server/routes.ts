@@ -4162,6 +4162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to setup stream sources table' });
     }
   });
+
+  // Add the new JWT-based authentication routes
+  app.use('/api/auth', authRoutes);
   
   const httpServer = createServer(app);
   
