@@ -27,8 +27,8 @@ export default function MobileSidebar({ isOpen, onClose, user, isLoading, isAuth
     
     // Check if subscription exists, is active, and has an end date in the future
     return Boolean(subscription && 
-           subscription.isActive && 
-           new Date(subscription.endDate) > new Date());
+           (subscription as any).isActive && 
+           new Date((subscription as any).endDate) > new Date());
   };
 
   if (!isOpen) return null;
@@ -116,6 +116,17 @@ export default function MobileSidebar({ isOpen, onClose, user, isLoading, isAuth
             className={`block py-2 px-4 text-[#f2f2f2] mb-2 rounded hover:bg-[#2f1a48] cursor-pointer ${location === '/league/mlb' ? 'bg-[#2f1a48]' : ''}`}
           >
             <i className="fas fa-baseball-ball mr-2 text-[#b08eff]"></i> MLB
+          </div>
+          
+          <div className="py-2 px-4 text-[#a68dff] text-sm uppercase font-medium mt-2">Live TV</div>
+          <div 
+            onClick={() => {
+              window.location.href = "/channels";
+              onClose();
+            }}
+            className={`block py-2 px-4 text-[#f2f2f2] mb-2 rounded hover:bg-[#2f1a48] cursor-pointer ${location.startsWith('/channel') ? 'bg-[#2f1a48]' : ''}`}
+          >
+            <i className="fas fa-tv mr-2 text-[#b08eff]"></i> Channels
           </div>
           
           <div className="py-2 px-4 text-[#a68dff] text-sm uppercase font-medium mt-2">Account</div>
