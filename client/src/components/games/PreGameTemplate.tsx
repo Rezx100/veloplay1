@@ -24,20 +24,42 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   useEffect(() => {
     const checkExistingAlert = async () => {
       try {
-        // Import apiRequest dynamically to avoid circular dependencies
-        const { apiRequest } = await import('@/lib/queryClient');
-        const response = await apiRequest('GET', `/api/game-alerts/${game.id}?t=${Date.now()}`);
+        console.log('🎯 PreGameTemplate: Checking alert for game', game.id);
+        
+        // Use the correct backend API that returns all user alerts
+        const response = await fetch('/api/game-alerts', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('🎯 PreGameTemplate: API response status:', response.status);
         
         if (response.ok) {
-          const data = await response.json();
-          console.log('🎯 Alert check result for game', game.id, ':', data);
-          setHasAlert(data.exists || false);
+          const alerts = await response.json();
+          console.log('🎯 PreGameTemplate: All user alerts:', alerts);
+          
+          // Check if there's an active alert for this game
+          const gameAlert = alerts.find((alert: any) => 
+            alert.gameId === game.id && !alert.isNotified
+          );
+          
+          console.log('🎯 PreGameTemplate: Alert for this game:', gameAlert);
+          
+          if (gameAlert) {
+            setHasAlert(true);
+            console.log('🚨 PreGameTemplate: Active alert found, showing "Alert Set"');
+          } else {
+            setHasAlert(false);
+            console.log('🚨 PreGameTemplate: No active alert found, showing "Set Alert"');
+          }
         } else {
-          console.log('⚠️ Alert check failed:', response.status);
+          console.log('⚠️ PreGameTemplate: Alert check failed:', response.status);
           setHasAlert(false);
         }
       } catch (error) {
-        console.error('Error checking existing alert:', error);
+        console.error('❌ PreGameTemplate: Error checking existing alert:', error);
         setHasAlert(false);
       }
     };
