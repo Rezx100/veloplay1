@@ -22,9 +22,11 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
 
   // Check for existing alert when component mounts with cache busting
   useEffect(() => {
+    console.log('🎯 PreGameTemplate: useEffect triggered for game:', game.id);
+    
     const checkExistingAlert = async () => {
       try {
-        console.log('🎯 PreGameTemplate: Checking alert for game', game.id);
+        console.log('🎯 PreGameTemplate: Starting alert check for game', game.id);
         
         // Use the correct backend API that returns all user alerts
         const response = await fetch('/api/game-alerts', {
@@ -39,11 +41,13 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
         if (response.ok) {
           const alerts = await response.json();
           console.log('🎯 PreGameTemplate: All user alerts:', alerts);
+          console.log('🎯 PreGameTemplate: Looking for game ID:', game.id);
           
           // Check if there's an active alert for this game
-          const gameAlert = alerts.find((alert: any) => 
-            alert.gameId === game.id && !alert.isNotified
-          );
+          const gameAlert = alerts.find((alert: any) => {
+            console.log('🔍 PreGameTemplate: Comparing alert gameId:', alert.gameId, 'with game.id:', game.id, 'isNotified:', alert.isNotified);
+            return alert.gameId === game.id && !alert.isNotified;
+          });
           
           console.log('🎯 PreGameTemplate: Alert for this game:', gameAlert);
           
@@ -56,6 +60,8 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           }
         } else {
           console.log('⚠️ PreGameTemplate: Alert check failed:', response.status);
+          const errorText = await response.text();
+          console.log('⚠️ PreGameTemplate: Error response:', errorText);
           setHasAlert(false);
         }
       } catch (error) {
