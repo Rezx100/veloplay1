@@ -74,16 +74,24 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
+    console.log('🔍 Login attempt for:', email);
     
     // Find user by email
     const user = await storage.getUserByEmail(email);
+    console.log('🔍 Found user:', user ? { id: user.id, email: user.email, hasPassword: !!user.passwordHash } : 'No user found');
+    
     if (!user || !user.passwordHash) {
+      console.log('❌ User not found or no password hash');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Verify password
+    console.log('🔍 Verifying password...');
     const isValidPassword = await verifyPassword(password, user.passwordHash);
+    console.log('🔍 Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('❌ Invalid password');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
