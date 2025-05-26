@@ -520,7 +520,7 @@ export default function ChannelPage() {
                     <div className="absolute inset-0 border-3 sm:border-4 border-transparent border-t-purple-500 border-r-purple-400 rounded-full animate-spin"></div>
                   </div>
                   {/* Responsive buffering text */}
-                  <p className="text-white text-sm sm:text-lg font-medium tracking-wide">Buffering stream...</p>
+                  <p className="text-white text-sm sm:text-lg font-medium tracking-wide">Connecting stream...</p>
                 </div>
               </div>
             )}

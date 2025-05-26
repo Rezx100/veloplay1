@@ -499,7 +499,7 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20 backdrop-blur-sm">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 border-4 border-purple-300/20 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-            <p className="text-white text-lg font-medium">Buffering stream...</p>
+            <p className="text-white text-lg font-medium">Connecting stream...</p>
             {usingFallbackUrl && (
               <p className="text-white/70 text-sm mt-2 bg-purple-900/50 px-3 py-1 rounded-full">
                 Using alternate stream source
