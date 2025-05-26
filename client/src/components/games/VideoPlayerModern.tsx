@@ -497,9 +497,14 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
       {/* Custom loading overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20 backdrop-blur-sm">
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 border-4 border-purple-300/20 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-            <p className="text-white text-lg font-medium">Connecting stream...</p>
+          <div className="flex flex-col items-center space-y-3 px-4">
+            {/* Responsive mobile-friendly spinner */}
+            <div className="relative w-10 h-10 sm:w-16 sm:h-16 mx-auto">
+              <div className="absolute inset-0 border-2 sm:border-4 border-purple-300/20 rounded-full"></div>
+              <div className="absolute inset-0 border-2 sm:border-4 border-transparent border-t-purple-600 border-r-purple-500 rounded-full animate-spin"></div>
+            </div>
+            {/* Responsive text sizing */}
+            <p className="text-white text-sm sm:text-lg font-medium tracking-wide">Connecting stream...</p>
             {usingFallbackUrl && (
               <p className="text-white/70 text-sm mt-2 bg-purple-900/50 px-3 py-1 rounded-full">
                 Using alternate stream source
