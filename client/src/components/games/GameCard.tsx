@@ -396,7 +396,7 @@ export default function GameCard({ game, showRecapButton = false, className = ''
   };
 
   return (
-    <div className={`relative h-[200px] rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:scale-[1.02] group cursor-pointer ${className}`} onClick={() => window.location.href = `/game/${game?.id || ''}`}>
+    <div className={`relative h-[200px] sm:h-[200px] rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:scale-[1.02] group cursor-pointer ${className}`} onClick={() => window.location.href = `/game/${game?.id || ''}`}>
       {/* Background - stadium image with high visibility */}
       <div className="absolute inset-0 overflow-hidden">
         <img 
@@ -477,24 +477,24 @@ export default function GameCard({ game, showRecapButton = false, className = ''
         </div>
       </div>
 
-      {/* Game info footer - sleek design */}
-      <div className="absolute inset-x-0 bottom-0 p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-white font-semibold text-sm line-clamp-1 mb-0.5 drop-shadow-md">{formattedTime}</div>
-            <div className="text-[#b08eff] text-xs truncate max-w-[150px] drop-shadow-md">
+      {/* Game info footer - mobile optimized */}
+      <div className="absolute inset-x-0 bottom-0 p-3 sm:p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-semibold text-sm sm:text-sm line-clamp-1 mb-1 drop-shadow-md">{formattedTime}</div>
+            <div className="text-[#b08eff] text-xs sm:text-xs truncate drop-shadow-md">
               {game?.venue?.name ? `${game.venue.name}` : 'Venue TBD'}
             </div>
           </div>
           
-          <div>
+          <div className="flex-shrink-0">
             <Link href={`/game/${game?.id || ''}`}>
               <div 
                 onClick={handleScrollToTop}
                 className={`
                   transition-all duration-300 cursor-pointer
                   ${getButtonStyle()} 
-                  px-4 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 shadow-md drop-shadow-md z-20`}
+                  px-3 sm:px-4 py-1.5 sm:py-1.5 rounded text-xs sm:text-xs font-medium flex items-center gap-1.5 shadow-md drop-shadow-md z-20 whitespace-nowrap`}
               >
                 <span>{getButtonText()}</span>
               </div>
