@@ -110,12 +110,60 @@ export default function ChannelPage() {
   const toggleFullscreen = () => {
     if (!videoRef.current) return;
     
-    if (!document.fullscreenElement) {
-      videoRef.current.requestFullscreen().catch(err => {
-        console.error('Error attempting to enable fullscreen:', err);
-      });
-    } else {
-      document.exitFullscreen();
+    // Mobile-friendly fullscreen implementation
+    const element = videoRef.current;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    try {
+      if (!document.fullscreenElement) {
+        // Try different fullscreen methods for cross-platform compatibility
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
+          (element as any).webkitRequestFullscreen();
+        } else if ((element as any).mozRequestFullScreen) {
+          (element as any).mozRequestFullScreen();
+        } else if ((element as any).msRequestFullscreen) {
+          (element as any).msRequestFullscreen();
+        } else if (isMobile) {
+          // For mobile devices, use native video fullscreen
+          if ((element as any).webkitEnterFullscreen) {
+            (element as any).webkitEnterFullscreen();
+          } else {
+            // Fallback: just make the video larger
+            element.style.position = 'fixed';
+            element.style.top = '0';
+            element.style.left = '0';
+            element.style.width = '100vw';
+            element.style.height = '100vh';
+            element.style.zIndex = '9999';
+            setIsFullscreen(true);
+          }
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) {
+          (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen) {
+          (document as any).msExitFullscreen();
+        } else {
+          // Reset custom fullscreen
+          element.style.position = '';
+          element.style.top = '';
+          element.style.left = '';
+          element.style.width = '';
+          element.style.height = '';
+          element.style.zIndex = '';
+          setIsFullscreen(false);
+        }
+      }
+    } catch (error) {
+      console.log('Fullscreen not supported on this device');
+      // Graceful fallback - do nothing instead of throwing error
     }
   };
   
@@ -444,17 +492,17 @@ export default function ChannelPage() {
               }}
             ></video>
             
-            {/* Buffering overlay - Clean modern design */}
+            {/* Buffering overlay - Responsive design */}
             {showBuffering && (
               <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center rounded-lg">
-                <div className="text-center space-y-4">
-                  {/* Modern purple spinning circle */}
-                  <div className="relative w-16 h-16 mx-auto">
-                    <div className="absolute inset-0 border-4 border-gray-700/30 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-transparent border-t-purple-500 border-r-purple-400 rounded-full animate-spin"></div>
+                <div className="text-center space-y-3 px-4">
+                  {/* Responsive purple spinning circle */}
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 mx-auto">
+                    <div className="absolute inset-0 border-3 sm:border-4 border-gray-700/30 rounded-full"></div>
+                    <div className="absolute inset-0 border-3 sm:border-4 border-transparent border-t-purple-500 border-r-purple-400 rounded-full animate-spin"></div>
                   </div>
-                  {/* Clean buffering text */}
-                  <p className="text-white text-lg font-medium tracking-wide">Buffering stream...</p>
+                  {/* Responsive buffering text */}
+                  <p className="text-white text-sm sm:text-lg font-medium tracking-wide">Buffering stream...</p>
                 </div>
               </div>
             )}
