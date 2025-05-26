@@ -774,7 +774,7 @@ export default function VideoPlayerModern({ game }: VideoPlayerModernProps) {
   // If user is not authenticated, show sign-in prompt
   if (!isAuthenticated && !authLoading) {
     return (
-      <div className="bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden shadow-2xl relative aspect-video">
+      <div className="bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden shadow-2xl relative min-h-[400px] sm:aspect-video">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div style={{ 
           backgroundImage: `url(${getStadiumImage()})`,
@@ -816,7 +816,7 @@ export default function VideoPlayerModern({ game }: VideoPlayerModernProps) {
   // Error state for stream URLs
   if (streamError && !isStreamNotFoundError(streamError)) {
     return (
-      <div className="bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden shadow-2xl relative aspect-video flex flex-col items-center justify-center text-white p-4">
+      <div className="bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden shadow-2xl relative min-h-[400px] sm:aspect-video flex flex-col items-center justify-center text-white p-4">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 mb-4 text-red-500 mx-auto" />
           <h2 className="text-xl font-bold mb-3">Stream Error</h2>
