@@ -161,6 +161,19 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
     };
   }, [gameId, isAuthenticated, user?.id]);
 
+  // Add debugging for useEffect
+  useEffect(() => {
+    console.log('🎯 GameAlertButton useEffect triggered:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      gameId, 
+      isAuthenticated 
+    });
+    if (user && gameId) {
+      console.log('🎯 About to check for existing alert');
+    }
+  }, [user, gameId, isAuthenticated]);
+
   const handleCreateAlert = async () => {
     if (!isAuthenticated) {
       toast({
