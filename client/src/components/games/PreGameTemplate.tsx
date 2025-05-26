@@ -20,25 +20,31 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   const [hasAlert, setHasAlert] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing alert when component mounts with cache busting
+  // Check for existing alert when component mounts using direct Supabase
   useEffect(() => {
     const checkExistingAlert = async () => {
       try {
-        const response = await fetch(`/api/game-alerts/${game.id}?t=${Date.now()}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'include', // Important for session cookies
-        });
+        // Direct Supabase call for faster checking
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          import.meta.env.VITE_SUPABASE_URL!,
+          import.meta.env.VITE_SUPABASE_ANON_KEY!
+        );
+
+        // Get current user from auth context (you may need to adjust this)
+        const { data: { user } } = await supabase.auth.getUser();
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('🎯 Alert check result for game', game.id, ':', data);
-          setHasAlert(data.exists || false);
+        if (user) {
+          const { data, error } = await supabase
+            .from('game_alerts')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('game_id', game.id)
+            .maybeSingle();
+
+          console.log('🎯 Alert check result for game', game.id, ':', !!data);
+          setHasAlert(!!data);
         } else {
-          console.log('⚠️ Alert check failed:', response.status);
           setHasAlert(false);
         }
       } catch (error) {

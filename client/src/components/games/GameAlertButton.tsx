@@ -92,29 +92,33 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       try {
         console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the proper API endpoint with authentication and cache busting
-        const response = await fetch(`/api/game-alerts/${gameId}?t=${Date.now()}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'include',
-        });
+        // Direct Supabase call for faster, simpler checking
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          import.meta.env.VITE_SUPABASE_URL!,
+          import.meta.env.VITE_SUPABASE_ANON_KEY!
+        );
 
-        if (response.ok) {
-          const result = await response.json();
-          console.log('🎯 Alert check result:', result);
+        const { data, error } = await supabase
+          .from('game_alerts')
+          .select('id, notify_minutes_before')
+          .eq('user_id', user.id)
+          .eq('game_id', gameId)
+          .maybeSingle();
+
+        if (isMounted) {
+          const alertExists = !!data;
+          setHasAlert(alertExists);
           
-          if (isMounted) {
-            setHasAlert(result.exists);
-            console.log(`🚨 Alert status set to: ${result.exists ? 'HAS ALERT' : 'NO ALERT'}`);
+          if (alertExists && data.notify_minutes_before) {
+            setNotifyMinutesBefore(data.notify_minutes_before.toString());
           }
-        } else {
-          console.error('❌ Failed to check alert status:', response.status);
-          if (isMounted) {
-            setHasAlert(false);
-          }
+          
+          console.log('🎯 Alert status loaded:', { 
+            hasAlert: alertExists, 
+            alertId: data?.id,
+            notifyMinutes: data?.notify_minutes_before 
+          });
         }
       } catch (error) {
         console.error('❌ Error checking game alert:', error);
@@ -230,36 +234,36 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
   };
 
   const handleRemoveAlert = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user?.id) {
       return;
     }
 
     setIsLoading(true);
     try {
-      // First get the alert to get its ID
-      const checkResponse = await apiRequest('GET', `/api/game-alerts/${gameId}`);
-      if (!checkResponse.ok) {
-        throw new Error('Failed to find alert');
+      // Direct Supabase call to remove alert
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL!,
+        import.meta.env.VITE_SUPABASE_ANON_KEY!
+      );
+
+      const { error } = await supabase
+        .from('game_alerts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('game_id', gameId);
+
+      if (error) {
+        console.error('Supabase error removing alert:', error);
+        throw error;
       }
 
-      const alertData = await checkResponse.json();
-      if (!alertData.exists) {
-        throw new Error('Alert not found');
-      }
-
-      const alertId = alertData.alert.id;
-      const deleteResponse = await apiRequest('DELETE', `/api/game-alerts/${alertId}`);
-
-      if (deleteResponse.ok) {
-        setHasAlert(false);
-        toast({
-          title: 'Game Alert Removed',
-          description: `Alert for ${gameName} has been removed`,
-          variant: 'default',
-        });
-      } else {
-        throw new Error('Failed to delete alert');
-      }
+      setHasAlert(false);
+      toast({
+        title: 'Game Alert Removed',
+        description: `Alert for ${gameName} has been removed`,
+        variant: 'default',
+      });
     } catch (error) {
       console.error('Error removing game alert:', error);
       toast({
