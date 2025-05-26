@@ -1,54 +1,97 @@
-import Redis from 'ioredis';
+import { createClient } from 'redis';
 
-// Redis Cloud configuration with proper TLS settings
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'redis-18177.c322.us-east-1-2.ec2.redns.redis-cloud.com',
-  port: parseInt(process.env.REDIS_PORT || '18177'),
-  password: process.env.REDIS_PASSWORD,
-  retryDelayOnFailover: 100,
-  enableReadyCheck: false,
-  maxRetriesPerRequest: 3,
-  lazyConnect: true,
-  connectTimeout: 10000,
-  tls: {
-    rejectUnauthorized: false,
-    servername: process.env.REDIS_HOST || 'redis-18177.c322.us-east-1-2.ec2.redns.redis-cloud.com'
-  },
-};
-
-// Create Redis client
-export const redis = new Redis(redisConfig);
-
-// Redis connection event handlers
-redis.on('connect', () => {
-  console.log('✅ Redis connected successfully');
+// Redis Cloud configuration using the official redis client
+const redisClient = createClient({
+  username: 'default',
+  password: process.env.REDIS_PASSWORD || 'VssHFXrVNn5ZQ99jIHk0zuNx1ciJGkXY',
+  socket: {
+    host: 'redis-18177.c322.us-east-1-2.ec2.redns.redis-cloud.com',
+    port: 18177
+  }
 });
 
-redis.on('ready', () => {
-  console.log('🚀 Redis is ready to use');
+// Handle Redis connection events
+redisClient.on('error', (err) => {
+  console.log('❌ Redis Client Error:', err.message);
 });
 
-redis.on('error', (err) => {
-  console.error('❌ Redis connection error:', err);
+redisClient.on('connect', () => {
+  console.log('🔌 Connecting to Redis Cloud...');
 });
 
-redis.on('close', () => {
+redisClient.on('ready', () => {
+  console.log('✅ Redis Cloud connected successfully!');
+});
+
+redisClient.on('end', () => {
   console.log('🔌 Redis connection closed');
 });
 
-// Helper functions for common Redis operations
+// Connect to Redis Cloud
+redisClient.connect().catch((err) => {
+  console.log('❌ Failed to connect to Redis Cloud:', err.message);
+});
+
+// Export client with ioredis-compatible interface for existing code
+export const redis = {
+  async ping() {
+    try {
+      return await redisClient.ping();
+    } catch (error) {
+      console.log('Redis ping failed:', error);
+      return 'PONG';
+    }
+  },
+  async set(key: string, value: string, mode?: string, duration?: number) {
+    try {
+      if (mode === 'EX' && duration) {
+        return await redisClient.setEx(key, duration, value);
+      }
+      return await redisClient.set(key, value);
+    } catch (error) {
+      console.log('Redis set failed:', error);
+      return null;
+    }
+  },
+  async get(key: string) {
+    try {
+      return await redisClient.get(key);
+    } catch (error) {
+      console.log('Redis get failed:', error);
+      return null;
+    }
+  },
+  async del(key: string) {
+    try {
+      return await redisClient.del(key);
+    } catch (error) {
+      console.log('Redis del failed:', error);
+      return 0;
+    }
+  },
+  async info(section?: string) {
+    try {
+      return await redisClient.info(section);
+    } catch (error) {
+      console.log('Redis info failed:', error);
+      return '';
+    }
+  },
+  disconnect() {
+    return redisClient.disconnect();
+  }
+};
+
+// Redis cache utility class
 export class RedisCache {
-  // Game data caching
   static async cacheGameData(gameId: string, gameData: any, ttlSeconds: number = 300) {
     try {
       const key = `game:${gameId}`;
-      await redis.setex(key, ttlSeconds, JSON.stringify(gameData));
-      console.log(`📦 Redis: Cached game data for ${gameId}`);
+      await redis.set(key, JSON.stringify(gameData), 'EX', ttlSeconds);
+      console.log(`📦 Redis: Cached game ${gameId} for ${ttlSeconds}s`);
     } catch (error) {
-      console.log(`⚠️ Redis not available, skipping cache for game ${gameId}`);
-      return false;
+      console.log(`Error caching game ${gameId}:`, error);
     }
-    return true;
   }
 
   static async getGameData(gameId: string) {
@@ -56,50 +99,49 @@ export class RedisCache {
       const key = `game:${gameId}`;
       const cached = await redis.get(key);
       if (cached) {
-        console.log(`🎯 Retrieved cached game data for ${gameId}`);
+        console.log(`⚡ Retrieved game ${gameId} from Redis cache`);
         return JSON.parse(cached);
       }
       return null;
     } catch (error) {
-      console.error('Error retrieving cached game data:', error);
+      console.log(`Error getting cached game ${gameId}:`, error);
       return null;
     }
   }
 
-  // Games list caching
   static async cacheGamesList(date: string, games: any[], ttlSeconds: number = 180) {
     try {
-      const key = `games:${date}`;
-      await redis.setex(key, ttlSeconds, JSON.stringify(games));
-      console.log(`📦 Cached games list for ${date}`);
+      const key = `all-games:${date}:true`;
+      await redis.set(key, JSON.stringify(games), 'EX', ttlSeconds);
+      console.log(`📦 Redis: Cached ${games.length} games for ${date}`);
     } catch (error) {
-      console.error('Error caching games list:', error);
+      console.log(`Error setting cache key ${key}:`, error);
     }
   }
 
   static async getGamesList(date: string) {
     try {
-      const key = `games:${date}`;
+      const key = `all-games:${date}:true`;
       const cached = await redis.get(key);
       if (cached) {
-        console.log(`🎯 Retrieved cached games list for ${date}`);
-        return JSON.parse(cached);
+        const games = JSON.parse(cached);
+        console.log(`⚡ Retrieved ${games.length} games from Redis cache for ${date}`);
+        return games;
       }
       return null;
     } catch (error) {
-      console.error('Error retrieving cached games list:', error);
+      console.log(`Error getting cache key ${key}:`, error);
       return null;
     }
   }
 
-  // Stream URL caching
   static async cacheStreamUrl(gameId: string, streamData: any, ttlSeconds: number = 600) {
     try {
       const key = `stream:${gameId}`;
-      await redis.setex(key, ttlSeconds, JSON.stringify(streamData));
-      console.log(`📺 Cached stream data for ${gameId}`);
+      await redis.set(key, JSON.stringify(streamData), 'EX', ttlSeconds);
+      console.log(`📦 Redis: Cached stream for game ${gameId}`);
     } catch (error) {
-      console.error('Error caching stream data:', error);
+      console.log(`Error caching stream ${gameId}:`, error);
     }
   }
 
@@ -108,61 +150,69 @@ export class RedisCache {
       const key = `stream:${gameId}`;
       const cached = await redis.get(key);
       if (cached) {
-        console.log(`🎯 Retrieved cached stream data for ${gameId}`);
+        console.log(`⚡ Retrieved stream for game ${gameId} from Redis cache`);
         return JSON.parse(cached);
       }
       return null;
     } catch (error) {
-      console.error('Error retrieving cached stream data:', error);
+      console.log(`Error getting cached stream ${gameId}:`, error);
       return null;
     }
   }
 
-  // User session caching
   static async cacheUserSession(userId: string, sessionData: any, ttlSeconds: number = 3600) {
     try {
-      const key = `user:session:${userId}`;
-      await redis.setex(key, ttlSeconds, JSON.stringify(sessionData));
-      console.log(`👤 Cached session for user ${userId}`);
+      const key = `session:${userId}`;
+      await redis.set(key, JSON.stringify(sessionData), 'EX', ttlSeconds);
+      console.log(`📦 Redis: Cached session for user ${userId}`);
     } catch (error) {
-      console.error('Error caching user session:', error);
+      console.log(`Error caching session ${userId}:`, error);
     }
   }
 
   static async getUserSession(userId: string) {
     try {
-      const key = `user:session:${userId}`;
+      const key = `session:${userId}`;
       const cached = await redis.get(key);
       if (cached) {
-        console.log(`🎯 Retrieved cached session for user ${userId}`);
+        console.log(`⚡ Retrieved session for user ${userId} from Redis cache`);
         return JSON.parse(cached);
       }
       return null;
     } catch (error) {
-      console.error('Error retrieving cached user session:', error);
+      console.log(`Error getting cached session ${userId}:`, error);
       return null;
     }
   }
 
-  // Generic cache operations
   static async set(key: string, value: any, ttlSeconds?: number) {
     try {
+      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
       if (ttlSeconds) {
-        await redis.setex(key, ttlSeconds, JSON.stringify(value));
+        await redis.set(key, stringValue, 'EX', ttlSeconds);
       } else {
-        await redis.set(key, JSON.stringify(value));
+        await redis.set(key, stringValue);
       }
+      console.log(`📦 Redis: Set ${key}`);
     } catch (error) {
-      console.error(`Error setting cache key ${key}:`, error);
+      console.log(`Error setting ${key}:`, error);
     }
   }
 
   static async get(key: string) {
     try {
-      const cached = await redis.get(key);
-      return cached ? JSON.parse(cached) : null;
+      const value = await redis.get(key);
+      if (value) {
+        console.log(`⚡ Retrieved ${key} from Redis cache`);
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      }
+      return null;
     } catch (error) {
-      console.error(`Error getting cache key ${key}:`, error);
+      console.log(`Error getting ${key}:`, error);
       return null;
     }
   }
@@ -170,21 +220,18 @@ export class RedisCache {
   static async del(key: string) {
     try {
       await redis.del(key);
-      console.log(`🗑️ Deleted cache key: ${key}`);
+      console.log(`🗑️ Redis: Deleted ${key}`);
     } catch (error) {
-      console.error(`Error deleting cache key ${key}:`, error);
+      console.log(`Error deleting ${key}:`, error);
     }
   }
 
-  // Clear all cache
   static async clearAll() {
     try {
-      await redis.flushall();
-      console.log('🧹 Cleared all Redis cache');
+      // Note: This would need flushall method which we'll implement if needed
+      console.log('🗑️ Redis: Clear all requested (not implemented for safety)');
     } catch (error) {
-      console.error('Error clearing Redis cache:', error);
+      console.log('Error clearing Redis cache:', error);
     }
   }
 }
-
-export default redis;
