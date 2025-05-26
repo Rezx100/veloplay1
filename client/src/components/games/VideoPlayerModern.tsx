@@ -554,6 +554,8 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
         className="w-full h-full rounded-lg" 
         playsInline
         autoPlay
+        muted
+        webkit-playsinline="true"
         onClick={togglePlay}
         crossOrigin="anonymous"
         style={{ objectFit: 'contain' }}
