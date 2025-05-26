@@ -183,7 +183,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       {/* Content Layer */}
       <div className="relative z-10 h-full flex flex-col">
         {/* Mobile Layout */}
-        <div className="sm:hidden h-full flex flex-col justify-between p-4">
+        <div className="md:hidden h-full flex flex-col justify-between p-4">
           {/* Top Header with League Badge and Alert Button */}
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
@@ -373,7 +373,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
         </div>
 
         {/* Desktop Layout (unchanged) */}
-        <div className="hidden sm:flex flex-col h-full">
+        <div className="hidden md:flex flex-col h-full">
           {/* Top Header with League Badge and Alert Button */}
           <div className="flex justify-between items-start p-4">
             <div className="flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
