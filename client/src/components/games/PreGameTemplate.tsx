@@ -281,16 +281,16 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
             <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Details in Better Spaced Cards */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full max-w-lg sm:max-w-none">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto min-w-[140px]">
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-white">
+          {/* Game Details - Centered Cards */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[140px]">
+              <div className="flex items-center justify-center gap-2 text-white">
                 <Clock className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto min-w-[180px]">
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-white">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[180px]">
+              <div className="flex items-center justify-center gap-2 text-white">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
               </div>
