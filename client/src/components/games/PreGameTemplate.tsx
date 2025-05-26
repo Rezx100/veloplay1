@@ -58,7 +58,43 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
     return () => clearTimeout(timeoutId);
   }, [game.id]);
 
+  // Calculate minutes until game starts to prevent impossible alerts
+  const getMinutesUntilGame = () => {
+    const now = new Date();
+    const gameTime = new Date(game.date);
+    const timeDifference = gameTime.getTime() - now.getTime();
+    return Math.floor(timeDifference / (1000 * 60));
+  };
+
+  // Get available alert options that are actually possible
+  const getAvailableAlertOptions = () => {
+    const minutesUntilGame = getMinutesUntilGame();
+    const options = [
+      { value: 5, label: '5 minutes before' },
+      { value: 10, label: '10 minutes before' },
+      { value: 15, label: '15 minutes before' },
+      { value: 30, label: '30 minutes before' },
+      { value: 60, label: '1 hour before' },
+      { value: 120, label: '2 hours before' },
+      { value: 1440, label: '1 day before' },
+    ];
+
+    // Only return options where there's enough time remaining
+    return options.filter(option => option.value < minutesUntilGame);
+  };
+
   const handleSetAlert = async (minutesBefore: number) => {
+    // Validate that the alert time is possible
+    const minutesUntilGame = getMinutesUntilGame();
+    if (minutesBefore >= minutesUntilGame) {
+      toast({
+        title: 'Invalid Alert Time',
+        description: `Game starts in ${minutesUntilGame} minutes. Cannot set alert for ${minutesBefore} minutes before.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const result = await apiRequest('POST', '/api/game-alerts-temp', {
         gameId: game.id,
@@ -217,24 +253,17 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40 sm:w-48">
-                  <DropdownMenuItem onClick={() => handleSetAlert(5)}>
-                    5 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(10)}>
-                    10 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(15)}>
-                    15 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(30)}>
-                    30 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(60)}>
-                    1 hour before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(120)}>
-                    2 hours before
-                  </DropdownMenuItem>
+                  {getAvailableAlertOptions().length > 0 ? (
+                    getAvailableAlertOptions().map(option => (
+                      <DropdownMenuItem key={option.value} onClick={() => handleSetAlert(option.value)}>
+                        {option.label}
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <DropdownMenuItem disabled>
+                      Game starts too soon for alerts
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
