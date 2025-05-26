@@ -166,7 +166,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   const regionalBroadcasts = game.broadcasts?.filter(b => !b.isNational) || [];
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-2xl relative aspect-video border border-purple-800/30">
+    <div className="rounded-lg overflow-hidden shadow-2xl relative aspect-video sm:aspect-video border border-purple-800/30">
       {/* Blurred Stadium Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
@@ -182,147 +182,150 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       
       {/* Content Layer */}
       <div className="relative z-10 h-full flex flex-col">
-        {/* Top Header with League Badge and Alert Button */}
-        <div className="flex justify-between items-start p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3 bg-black/40 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-2">
-            {getLeagueIcon()}
-            <Badge className={`text-white font-bold px-2 sm:px-3 py-1 text-xs sm:text-sm border-0 ${
-              game.league === 'nhl' ? 'bg-[#041E42]' :
-              game.league === 'nba' ? 'bg-[#C8102E]' :
-              game.league === 'mlb' ? 'bg-[#132448]' :
-              game.league === 'nfl' ? 'bg-[#013369]' :
-              'bg-purple-600'
-            }`}>
-              {game.league.toUpperCase()}
-            </Badge>
+        {/* Mobile Layout */}
+        <div className="sm:hidden h-full flex flex-col">
+          {/* Top Header with League Badge and Alert Button */}
+          <div className="flex justify-between items-start p-4">
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
+              {getLeagueIcon()}
+              <Badge className={`text-white font-bold px-3 py-1 text-sm border-0 ${
+                game.league === 'nhl' ? 'bg-[#041E42]' :
+                game.league === 'nba' ? 'bg-[#C8102E]' :
+                game.league === 'mlb' ? 'bg-[#132448]' :
+                game.league === 'nfl' ? 'bg-[#013369]' :
+                'bg-purple-600'
+              }`}>
+                {game.league.toUpperCase()}
+              </Badge>
+            </div>
+            
+            {/* Alert Button */}
+            <div className="flex-shrink-0">
+              {hasAlert ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-sm px-3"
+                  disabled
+                >
+                  <Bell className="mr-2 h-4 w-4 fill-current animate-bell-ring" />
+                  Alert
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-sm px-3"
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Alert
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => handleSetAlert(5)}>
+                      5 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(10)}>
+                      10 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(15)}>
+                      15 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(30)}>
+                      30 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(60)}>
+                      1 hour before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(120)}>
+                      2 hours before
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
-          
-          {/* Set Alert Button - Mobile Optimized */}
-          <div className="flex-shrink-0">
-            {hasAlert ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
-                disabled
-              >
-                <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 fill-current animate-bell-ring" />
-                <span className="hidden sm:inline">Alert Set</span>
-                <span className="sm:hidden">Set</span>
-              </Button>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-xs sm:text-sm px-2 sm:px-3"
-                  >
-                    <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Set Alert</span>
-                    <span className="sm:hidden">Alert</span>
-                    <ChevronDown className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 sm:w-48">
-                  <DropdownMenuItem onClick={() => handleSetAlert(5)}>
-                    5 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(10)}>
-                    10 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(15)}>
-                    15 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(30)}>
-                    30 minutes before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(60)}>
-                    1 hour before
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSetAlert(120)}>
-                    2 hours before
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
 
-        {/* Main Content - Team Logos and Info */}
-        <div className="flex-1 flex flex-col items-center justify-center px-3 sm:px-6">
-          {/* Team Matchup with Larger Logos and Better Spacing */}
-          <div className="flex items-center justify-center gap-8 sm:gap-16 mb-8 sm:mb-12">
+          {/* Team Matchup */}
+          <div className="flex items-center justify-center gap-6 mb-8 px-4">
             {/* Away Team */}
             <div className="text-center">
-              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <div className="w-20 h-20 mx-auto mb-3 bg-gray-700/50 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
                 <img 
                   src={game.awayTeam.logo} 
                   alt={game.awayTeam.name}
-                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+                  className="w-14 h-14 object-contain"
                 />
               </div>
-              {/* Show abbreviation prominently */}
-              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
+              <h3 className="font-bold text-white text-xl mb-1">{game.awayTeam.abbreviation}</h3>
+              <p className="text-gray-300 text-sm">{game.awayTeam.name}</p>
             </div>
             
-            {/* VS Section - More Prominent */}
-            <div className="px-2 sm:px-4">
-              <div className="text-2xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
+            {/* VS Section */}
+            <div className="px-4">
+              <div className="text-2xl font-bold text-white/90 tracking-wider">VS</div>
             </div>
             
             {/* Home Team */}
             <div className="text-center">
-              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <div className="w-20 h-20 mx-auto mb-3 bg-gray-700/50 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
                 <img 
                   src={game.homeTeam.logo} 
                   alt={game.homeTeam.name}
-                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+                  className="w-14 h-14 object-contain"
                 />
               </div>
-              {/* Show abbreviation prominently */}
-              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
+              <h3 className="font-bold text-white text-xl mb-1">{game.homeTeam.abbreviation}</h3>
+              <p className="text-gray-300 text-sm">{game.homeTeam.name}</p>
             </div>
           </div>
 
-          {/* Countdown Timer - More Prominent */}
-          <div className="text-center mb-8 sm:mb-12">
-            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
+          {/* Countdown Timer */}
+          <div className="text-center mb-8">
+            <div className="text-4xl font-bold text-white mb-2 font-mono tracking-wide">
               {timeRemaining}
             </div>
-            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
+            <p className="text-gray-300 text-lg">Until Game Time</p>
           </div>
 
-          {/* Game Details - Centered Cards */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[140px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <Clock className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
+          {/* Game Time */}
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-6 py-3">
+              <div className="flex items-center gap-2 text-white">
+                <Clock className="w-5 h-5" />
+                <span className="font-medium text-lg">{formatGameTime()}</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[180px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
+          </div>
+
+          {/* Venue */}
+          <div className="flex justify-center mb-6">
+            <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-6 py-3 max-w-xs">
+              <div className="flex items-center gap-2 text-white">
+                <MapPin className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium text-lg text-center">{game.venue.name}</span>
               </div>
             </div>
           </div>
 
           {/* Broadcast Info */}
           {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
-            <div className="mb-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <Tv className="w-4 h-4 text-white" />
-                <span className="text-white font-medium">Available On</span>
+            <div className="text-center px-4">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
+                  <Tv className="w-4 h-4 text-black" />
+                </div>
+                <span className="text-white font-medium text-lg">Available On</span>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {nationalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-blue-600/30 text-blue-200 border-blue-400/50 backdrop-blur-sm"
+                    className="bg-purple-600 text-white border-0 text-sm px-4 py-2 font-medium"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
@@ -330,7 +333,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 {regionalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-purple-600/30 text-purple-200 border-purple-400/50 backdrop-blur-sm"
+                    className="bg-purple-600 text-white border-0 text-sm px-4 py-2 font-medium"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
@@ -338,6 +341,165 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Desktop Layout (unchanged) */}
+        <div className="hidden sm:flex flex-col h-full">
+          {/* Top Header with League Badge and Alert Button */}
+          <div className="flex justify-between items-start p-4">
+            <div className="flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
+              {getLeagueIcon()}
+              <Badge className={`text-white font-bold px-3 py-1 text-sm border-0 ${
+                game.league === 'nhl' ? 'bg-[#041E42]' :
+                game.league === 'nba' ? 'bg-[#C8102E]' :
+                game.league === 'mlb' ? 'bg-[#132448]' :
+                game.league === 'nfl' ? 'bg-[#013369]' :
+                'bg-purple-600'
+              }`}>
+                {game.league.toUpperCase()}
+              </Badge>
+            </div>
+            
+            {/* Set Alert Button - Desktop */}
+            <div className="flex-shrink-0">
+              {hasAlert ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-sm px-3"
+                  disabled
+                >
+                  <Bell className="mr-2 h-4 w-4 fill-current animate-bell-ring" />
+                  Alert Set
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-sm px-3"
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Set Alert
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => handleSetAlert(5)}>
+                      5 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(10)}>
+                      10 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(15)}>
+                      15 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(30)}>
+                      30 minutes before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(60)}>
+                      1 hour before
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSetAlert(120)}>
+                      2 hours before
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content - Team Logos and Info */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6">
+            {/* Team Matchup with Larger Logos and Better Spacing */}
+            <div className="flex items-center justify-center gap-16 mb-12">
+              {/* Away Team */}
+              <div className="text-center">
+                <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.awayTeam.logo} 
+                    alt={game.awayTeam.name}
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                {/* Show abbreviation prominently */}
+                <h3 className="font-bold text-white text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-base font-medium">{game.awayTeam.name}</p>
+              </div>
+              
+              {/* VS Section - More Prominent */}
+              <div className="px-4">
+                <div className="text-5xl font-bold text-white/90 tracking-wider">VS</div>
+              </div>
+              
+              {/* Home Team */}
+              <div className="text-center">
+                <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.homeTeam.logo} 
+                    alt={game.homeTeam.name}
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                {/* Show abbreviation prominently */}
+                <h3 className="font-bold text-white text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-base font-medium">{game.homeTeam.name}</p>
+              </div>
+            </div>
+
+            {/* Countdown Timer - More Prominent */}
+            <div className="text-center mb-12">
+              <div className="text-6xl font-bold text-white mb-3 font-mono tracking-wide drop-shadow-lg">
+                {timeRemaining}
+              </div>
+              <p className="text-purple-200 text-xl font-medium">Until Game Time</p>
+            </div>
+
+            {/* Game Details - Centered Cards */}
+            <div className="flex flex-row items-center justify-center gap-8 mb-8 w-full">
+              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-3 min-w-[140px]">
+                <div className="flex items-center justify-center gap-2 text-white">
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium text-base">{formatGameTime()}</span>
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-3 min-w-[180px]">
+                <div className="flex items-center justify-center gap-2 text-white">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium text-base truncate">{game.venue.name}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Broadcast Info */}
+            {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
+              <div className="mb-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Tv className="w-4 h-4 text-white" />
+                  <span className="text-white font-medium">Available On</span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {nationalBroadcasts.map((broadcast, index) => (
+                    <Badge 
+                      key={index} 
+                      className="bg-blue-600/30 text-blue-200 border-blue-400/50 backdrop-blur-sm"
+                    >
+                      {broadcast.name || broadcast.callLetters}
+                    </Badge>
+                  ))}
+                  {regionalBroadcasts.map((broadcast, index) => (
+                    <Badge 
+                      key={index} 
+                      className="bg-purple-600/30 text-purple-200 border-purple-400/50 backdrop-blur-sm"
+                    >
+                      {broadcast.name || broadcast.callLetters}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
