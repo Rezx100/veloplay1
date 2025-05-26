@@ -81,7 +81,7 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
     let isMounted = true;
     
     const checkAlertStatus = async () => {
-      if (!isAuthenticated || !user) {
+      if (!isAuthenticated || !user?.id) {
         if (isMounted) {
           setIsChecking(false);
           setHasAlert(false);
@@ -173,9 +173,16 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
         import.meta.env.VITE_SUPABASE_ANON_KEY!
       );
 
+      // Generate ID in the same format as your existing records (timestamp-based)
+      const alertId = Date.now().toString();
+      const alertDataWithId = {
+        ...alertData,
+        id: alertId
+      };
+
       const { data, error } = await supabase
         .from('game_alerts')
-        .insert(alertData)
+        .insert(alertDataWithId)
         .select()
         .single();
 
