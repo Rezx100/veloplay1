@@ -83,8 +83,8 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
     } catch (error) {
       console.error('Error setting game alert:', error);
       toast({
-        title: 'Unable to Set Alert',
-        description: error instanceof Error ? error.message : 'Please try again later.',
+        title: 'Alert Already Set',
+        description: 'You already have an alert set for this game.',
         variant: 'default',
       });
     }
