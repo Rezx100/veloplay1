@@ -108,6 +108,7 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
           .eq('game_id', gameId);
 
         console.log('📊 Supabase query result:', { data, error });
+        console.log('📊 Query parameters:', { userId: user.id, gameId });
 
         if (isMounted) {
           if (data && data.length > 0 && !error) {
