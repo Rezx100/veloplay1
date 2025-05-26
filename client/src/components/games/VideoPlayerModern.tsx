@@ -536,9 +536,17 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
         className="w-full h-full rounded-lg" 
         playsInline
         autoPlay
+        muted
         webkit-playsinline="true"
+        preload="auto"
         onClick={togglePlay}
         crossOrigin="anonymous"
+        onLoadedData={() => {
+          // Force play on mobile when data loads
+          if (videoRef.current && !videoRef.current.playing) {
+            videoRef.current.play().catch(console.log);
+          }
+        }}
         style={{ objectFit: 'contain' }}
       />
       

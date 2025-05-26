@@ -487,9 +487,17 @@ export default function ChannelPage() {
               ref={videoRef} 
               className="w-full h-full object-contain bg-black rounded-lg" 
               autoPlay 
+              muted
               playsInline
               webkit-playsinline="true"
+              preload="auto"
               onClick={togglePlay}
+              onLoadedData={() => {
+                // Force play on mobile when data loads
+                if (videoRef.current && !videoRef.current.playing) {
+                  videoRef.current.play().catch(console.log);
+                }
+              }}
               style={{
                 background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)'
               }}
