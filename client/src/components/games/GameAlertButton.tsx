@@ -100,6 +100,16 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
         );
 
         console.log('🔍 Querying Supabase directly for alert:', { userId: user.id, gameId });
+        console.log('🔍 User object:', user);
+        console.log('🔍 User ID type:', typeof user.id, 'Value:', user.id);
+
+        // First, let's see what's actually in the database for this game
+        const { data: allAlertsForGame, error: allError } = await supabase
+          .from('game_alerts')
+          .select('*')
+          .eq('game_id', gameId);
+
+        console.log('📊 All alerts for game', gameId, ':', allAlertsForGame, 'Error:', allError);
 
         const { data, error } = await supabase
           .from('game_alerts')
