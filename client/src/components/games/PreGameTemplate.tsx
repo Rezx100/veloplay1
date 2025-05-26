@@ -24,14 +24,9 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   useEffect(() => {
     const checkExistingAlert = async () => {
       try {
-        const response = await fetch(`/api/game-alerts/${game.id}?t=${Date.now()}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'include', // Important for session cookies
-        });
+        // Import apiRequest dynamically to avoid circular dependencies
+        const { apiRequest } = await import('@/lib/queryClient');
+        const response = await apiRequest('GET', `/api/game-alerts/${game.id}?t=${Date.now()}`);
         
         if (response.ok) {
           const data = await response.json();
