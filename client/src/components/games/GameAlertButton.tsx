@@ -99,20 +99,23 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
           import.meta.env.VITE_SUPABASE_ANON_KEY!
         );
 
+        console.log('🔍 Querying Supabase directly for alert:', { userId: user.id, gameId });
+
         const { data, error } = await supabase
           .from('game_alerts')
           .select('*')
           .eq('user_id', user.id)
-          .eq('game_id', gameId)
-          .single();
+          .eq('game_id', gameId);
+
+        console.log('📊 Supabase query result:', { data, error });
 
         if (isMounted) {
-          if (data && !error) {
+          if (data && data.length > 0 && !error) {
             setHasAlert(true);
             console.log(`🚨 Alert status set to: HAS ALERT`);
           } else {
             setHasAlert(false);
-            console.log(`🚨 Alert status set to: NO ALERT`);
+            console.log(`🚨 Alert status set to: NO ALERT`, error);
           }
         }
       } catch (error) {
