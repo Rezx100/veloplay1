@@ -905,7 +905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', authMiddleware, async (req, res) => {
     try {
-      // User is already attached to req by the isAuthenticated middleware
+      // User is already attached to req by the authMiddleware middleware
       const user = req.user;
       res.json({
         ...user,
@@ -918,7 +918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User profile with trial status calculation
-  app.get('/api/user/profile', isAuthenticated, async (req, res) => {
+  app.get('/api/user/profile', authMiddleware, async (req, res) => {
     try {
       const user = req.user;
       if (!user) {
@@ -1462,7 +1462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get current user endpoint for client - required for admin panel access
-  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+  app.get('/api/auth/user', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       
@@ -1959,7 +1959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin stream management routes
-  app.get('/api/admin/streams', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/streams', authMiddleware, async (req, res) => {
     try {
       const streams = await storage.getAllStreams();
       res.json(streams);
@@ -1969,7 +1969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/streams', isAuthenticated, isAdmin, async (req, res) => {
+  app.post('/api/admin/streams', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       
@@ -1986,7 +1986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/streams/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.put('/api/admin/streams/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const { streamUrl, awayStreamUrl } = req.body;
@@ -2013,7 +2013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/streams/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.delete('/api/admin/streams/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteStream(parseInt(id));
@@ -2027,7 +2027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stream mapping is now handled automatically by the system when streams are requested
 
   // Auto-generate stream URLs for a game based on team names
-  app.post('/api/admin/auto-stream', isAuthenticated, isAdmin, async (req, res) => {
+  app.post('/api/admin/auto-stream', authMiddleware, async (req, res) => {
     try {
       const { gameId } = req.body;
       
@@ -2113,7 +2113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stream mapping is now handled automatically by the system when streams are requested
   
   // Auto-generate streams for ALL games endpoint with auto cleanup
-  app.post('/api/admin/auto-generate-all-streams', isAuthenticated, isAdmin, async (req, res) => {
+  app.post('/api/admin/auto-generate-all-streams', authMiddleware, async (req, res) => {
     try {
       // Get all games for today and tomorrow
       const allGames = await getAllGames(undefined, true);
@@ -2245,7 +2245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin user management routes
-  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/users', authMiddleware, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -2256,7 +2256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin stream mappings endpoint - fetches from CentralizedStreamManager
-  app.get('/api/admin/stream-mappings', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/stream-mappings', authMiddleware, async (req, res) => {
     try {
       const { getDeduplicatedTeamMappings } = require('./centralizedStreamManager');
       const streamMappings = await getDeduplicatedTeamMappings();
@@ -2268,7 +2268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin-only route to delete user permanently from database
-  app.delete('/api/admin/users/:userId', isAuthenticated, isAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:userId', authMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const adminUserId = req.user?.id;
@@ -2318,7 +2318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete user endpoint - removes user from both our database and Supabase
-  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.delete('/api/admin/users/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -2402,7 +2402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/users/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const user = await storage.getUser(id);
@@ -2418,7 +2418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/users/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.put('/api/admin/users/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const { firstName, lastName, email, isAdmin: setAdmin } = req.body;
@@ -2447,7 +2447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This route is a duplicate of the one above at line 1836-1918 and has been removed
 
   // Admin subscription plan management routes
-  app.get('/api/admin/subscription-plans', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/subscription-plans', authMiddleware, async (req, res) => {
     try {
       const plans = await storage.getAllSubscriptionPlans();
       res.json(plans);
@@ -2457,7 +2457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/subscription-plans', isAuthenticated, isAdmin, async (req, res) => {
+  app.post('/api/admin/subscription-plans', authMiddleware, async (req, res) => {
     try {
       const { name, price, description, durationDays, features } = req.body;
       
@@ -2480,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/subscription-plans/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.put('/api/admin/subscription-plans/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const { name, price, description, durationDays, features } = req.body;
@@ -2500,7 +2500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/subscription-plans/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.delete('/api/admin/subscription-plans/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteSubscriptionPlan(parseInt(id));
@@ -2512,7 +2512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin subscription management routes
-  app.get('/api/admin/subscriptions', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/subscriptions', authMiddleware, async (req, res) => {
     try {
       const subscriptions = await storage.getAllSubscriptions();
       res.json(subscriptions);
@@ -2522,7 +2522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put('/api/admin/subscriptions/:id', isAuthenticated, isAdmin, async (req, res) => {
+  app.put('/api/admin/subscriptions/:id', authMiddleware, async (req, res) => {
     try {
       const { id } = req.params;
       const { isActive, endDate } = req.body;
@@ -2552,7 +2552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/subscription', isAuthenticated, async (req, res) => {
+  app.get('/api/subscription', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       const subscription = await storage.getSubscriptionByUserId(userId);
@@ -2564,7 +2564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint to check subscription status for access control
-  app.get('/api/subscription/status', isAuthenticated, async (req, res) => {
+  app.get('/api/subscription/status', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       const subscription = await storage.getSubscriptionByUserId(userId);
@@ -2587,7 +2587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/subscription', isAuthenticated, async (req, res) => {
+  app.post('/api/subscription', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       
@@ -2646,7 +2646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/subscription/cancel', isAuthenticated, async (req, res) => {
+  app.post('/api/subscription/cancel', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       const subscription = await storage.getSubscriptionByUserId(userId);
@@ -2664,7 +2664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint to automatically generate streams for all of today's games
-  app.post('/api/admin/auto-generate-all-streams', isAuthenticated, isAdmin, async (req, res) => {
+  app.post('/api/admin/auto-generate-all-streams', authMiddleware, async (req, res) => {
     try {
       // Get all games for today
       const today = new Date();
@@ -2862,7 +2862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin - get active users
-  app.get("/api/admin/active-users", isAuthenticated, isAdmin, (req, res) => {
+  app.get("/api/admin/active-users", authMiddleware, (req, res) => {
     try {
       const activeUsers = getActiveUsers();
       res.json(activeUsers);
@@ -2902,7 +2902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Email - send subscription expiration notification
-  app.post("/api/email/subscription-expiration", isAuthenticated, (req: any, res) => {
+  app.post("/api/email/subscription-expiration", authMiddleware, (req: any, res) => {
     try {
       const { email, displayName, daysRemaining } = req.body;
       
@@ -2940,7 +2940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Email - send game alert (REDIRECTED TO SCHEDULER)
-  app.post("/api/email/game-alert", isAuthenticated, async (req: any, res) => {
+  app.post("/api/email/game-alert", authMiddleware, async (req: any, res) => {
     try {
       console.log('🚨 OLD ROUTE HIT: Redirecting /api/email/game-alert to scheduler');
       const { email, displayName, gameDetails } = req.body;
@@ -2982,7 +2982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Email - send test email (admin only)
-  app.post("/api/admin/email/test", isAuthenticated, isAdmin, (req: any, res) => {
+  app.post("/api/admin/email/test", authMiddleware, (req: any, res) => {
     try {
       const { email } = req.body;
       
@@ -3045,7 +3045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startCleanupInterval();
   
   // Stripe Payment Routes
-  app.post('/api/create-checkout-session', isAuthenticated, async (req, res) => {
+  app.post('/api/create-checkout-session', authMiddleware, async (req, res) => {
     try {
       const { planId } = req.body;
       const userId = req.user?.id;
@@ -3076,7 +3076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/create-subscription', isAuthenticated, async (req, res) => {
+  app.post('/api/create-subscription', authMiddleware, async (req, res) => {
     try {
       const { planId, amount } = req.body;
       const userId = req.user?.id;
@@ -3099,7 +3099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/process-payment', isAuthenticated, async (req, res) => {
+  app.post('/api/process-payment', authMiddleware, async (req, res) => {
     try {
       const { paymentMethodId, planId, amount } = req.body;
       const userId = req.user?.id;
@@ -3165,7 +3165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/activate-subscription', isAuthenticated, async (req, res) => {
+  app.post('/api/activate-subscription', authMiddleware, async (req, res) => {
     try {
       const { planId } = req.body;
       const userId = req.user?.id;
@@ -3206,7 +3206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Special admin route for direct subscription activation (no payment required)
-  app.post('/api/admin-activate-subscription', isAuthenticated, async (req, res) => {
+  app.post('/api/admin-activate-subscription', authMiddleware, async (req, res) => {
     try {
       const { planId, activationCode } = req.body;
       const userId = req.user?.id;
@@ -3276,7 +3276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin-only route to grant/update user subscription
-  app.post('/api/admin/users/:userId/subscription', isAuthenticated, async (req, res) => {
+  app.post('/api/admin/users/:userId/subscription', authMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const { planId, extensionDays, action } = req.body; // action: 'grant', 'extend', 'revoke'
@@ -3381,7 +3381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin-only route to reset user password
-  app.post('/api/admin/users/:userId/reset-password', isAuthenticated, async (req, res) => {
+  app.post('/api/admin/users/:userId/reset-password', authMiddleware, async (req, res) => {
     try {
       const { userId } = req.params;
       const adminUserId = req.user?.id;
@@ -3430,7 +3430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/confirm-payment', isAuthenticated, async (req, res) => {
+  app.post('/api/confirm-payment', authMiddleware, async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
       const userId = req.user?.id;
@@ -3476,7 +3476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/verify-payment', isAuthenticated, async (req, res) => {
+  app.post('/api/verify-payment', authMiddleware, async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
       
@@ -3542,7 +3542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Get all alerts for a user
-  app.get('/api/game-alerts', isAuthenticated, async (req, res) => {
+  app.get('/api/game-alerts', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       
@@ -3584,7 +3584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create game alert - temporarily bypass auth for testing
-  app.post('/api/game-alerts-temp', isAuthenticated, async (req: any, res) => {
+  app.post('/api/game-alerts-temp', authMiddleware, async (req: any, res) => {
     console.log('🎯 ALERT ROUTE HIT! Request received:', req.method, req.url);
     console.log('📦 Request body:', req.body);
     
@@ -3641,7 +3641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Delete game alert
-  app.delete('/api/game-alerts/:alertId', isAuthenticated, async (req, res) => {
+  app.delete('/api/game-alerts/:alertId', authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id;
       const alertId = parseInt(req.params.alertId);
@@ -3659,7 +3659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if user has alert for specific game
-  app.get('/api/game-alerts/:gameId', isAuthenticated, async (req: any, res) => {
+  app.get('/api/game-alerts/:gameId', authMiddleware, async (req: any, res) => {
     try {
       const { gameId } = req.params;
       const userId = req.user?.id;
@@ -3685,7 +3685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a game alert
-  app.delete('/api/game-alerts/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/game-alerts/:id', authMiddleware, async (req, res) => {
     try {
       const alertId = parseInt(req.params.id);
       const userId = req.user?.id;
@@ -3715,7 +3715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if a game alert exists for a user
-  app.get('/api/game-alerts/:gameId', isAuthenticated, async (req, res) => {
+  app.get('/api/game-alerts/:gameId', authMiddleware, async (req, res) => {
     try {
       const gameId = req.params.gameId;
       const userId = req.user?.id;
@@ -3748,7 +3748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User dashboard statistics endpoint
-  app.get('/api/user/dashboard-stats', isAuthenticated, async (req, res) => {
+  app.get('/api/user/dashboard-stats', authMiddleware, async (req, res) => {
     try {
       console.log('📊 [API] Fetching user dashboard statistics');
       
@@ -3789,7 +3789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin dashboard statistics endpoint
-  app.get('/api/admin/dashboard-stats', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/dashboard-stats', authMiddleware, async (req, res) => {
     try {
       console.log('📊 [API] Fetching dashboard statistics');
       
@@ -3885,7 +3885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OLD ENDPOINT REMOVED - Now using centralized Supabase system below
 
   // Get stream mappings for M3U8 URL Management - SIMPLIFIED WORKING VERSION
-  app.get('/api/admin/stream-mappings', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/stream-mappings', authMiddleware, async (req, res) => {
     try {
       console.log('🎯 [API] Fetching stream mappings for admin panel');
       
@@ -3948,7 +3948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // M3U8 URL Management API endpoint - CENTRALIZED SUPABASE VERSION
-  app.put('/api/admin/update-stream-url', isAuthenticated, isAdmin, async (req, res) => {
+  app.put('/api/admin/update-stream-url', authMiddleware, async (req, res) => {
     try {
       const { teamName, newUrl } = req.body;
       
@@ -4031,7 +4031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes for managing channels - protected by admin check
-  app.post('/api/channels', isAuthenticated, async (req: any, res) => {
+  app.post('/api/channels', authMiddleware, async (req: any, res) => {
     // Check if user is admin
     if (!req.user?.isAdmin) {
       return res.status(403).json({ message: 'Admin access required' });
@@ -4066,7 +4066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/channels/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/channels/:id', authMiddleware, async (req: any, res) => {
     // Check if user is admin
     if (!req.user?.isAdmin) {
       return res.status(403).json({ message: 'Admin access required' });
@@ -4104,7 +4104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/channels/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/channels/:id', authMiddleware, async (req: any, res) => {
     // Check if user is admin
     if (!req.user?.isAdmin) {
       return res.status(403).json({ message: 'Admin access required' });
@@ -4129,7 +4129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Register Stream Sources API routes - admin section
-  app.use('/api/stream-sources', isAuthenticated, streamSourcesRoutes);
+  app.use('/api/stream-sources', authMiddleware, streamSourcesRoutes);
   
   // Register Stream Sources Latest endpoint for dynamic player URL updates
   // This endpoint needs to be public for client-side URL standardization and fallbacks
@@ -4142,7 +4142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/direct-stream-url', directStreamUrlRoutes);
   
   // Initialize stream sources table if needed
-  app.get('/api/init-stream-sources', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/init-stream-sources', authMiddleware, async (req, res) => {
     try {
       res.redirect(307, '/api/direct-stream-url/init');
     } catch (error) {
@@ -4152,7 +4152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Setup endpoint for initializing stream sources table
-  app.get('/api/setup-stream-sources', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/setup-stream-sources', authMiddleware, async (req, res) => {
     try {
       const { setupStreamSourcesTable } = await import('./routes/db-setup');
       const result = await setupStreamSourcesTable();
