@@ -231,12 +231,11 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
+                className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-xs sm:text-sm px-3 sm:px-3 min-w-[80px] sm:min-w-[100px]"
                 disabled
               >
                 <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 fill-current animate-bell-ring" />
-                <span className="hidden sm:inline">Alert Set</span>
-                <span className="sm:hidden">Set</span>
+                <span>Alert Set</span>
               </Button>
             ) : (
               <DropdownMenu>
@@ -272,37 +271,33 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
 
         {/* Main Content - Mobile-First Stacked Design */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6">
-          {/* Team Matchup - Mobile: Stacked, Desktop: Horizontal */}
+          {/* Team Matchup - Mobile: Logo Side by Side, Desktop: Horizontal */}
           <div className="mb-6 sm:mb-8">
-            {/* Mobile Stack Layout */}
-            <div className="flex flex-col items-center gap-4 sm:hidden">
-              {/* Away Team */}
+            {/* Mobile Logo Layout - Just logos side by side */}
+            <div className="flex items-center justify-center gap-6 sm:hidden">
+              {/* Away Team Logo */}
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-3 bg-white/10 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                <div className="w-16 h-16 mx-auto mb-2 bg-white/10 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-white/20">
                   <img 
                     src={game.awayTeam.logo} 
                     alt={game.awayTeam.name}
-                    className="w-14 h-14 object-contain"
+                    className="w-12 h-12 object-contain"
                   />
                 </div>
-                <h3 className="font-bold text-white text-lg mb-1">{game.awayTeam.abbreviation}</h3>
-                <p className="text-purple-200 text-sm font-medium">{game.awayTeam.name}</p>
               </div>
               
               {/* VS */}
-              <div className="text-2xl font-bold text-white/90 tracking-wider py-2">VS</div>
+              <div className="text-xl font-bold text-white/90 tracking-wider">VS</div>
               
-              {/* Home Team */}
+              {/* Home Team Logo */}
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-3 bg-white/10 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                <div className="w-16 h-16 mx-auto mb-2 bg-white/10 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-white/20">
                   <img 
                     src={game.homeTeam.logo} 
                     alt={game.homeTeam.name}
-                    className="w-14 h-14 object-contain"
+                    className="w-12 h-12 object-contain"
                   />
                 </div>
-                <h3 className="font-bold text-white text-lg mb-1">{game.homeTeam.abbreviation}</h3>
-                <p className="text-purple-200 text-sm font-medium">{game.homeTeam.name}</p>
               </div>
             </div>
 
