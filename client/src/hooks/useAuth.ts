@@ -55,7 +55,8 @@ export function useAuth() {
       if (data.success && data.token) {
         setToken(data.token);
         setIsAuthenticated(true);
-        setIsEmailVerified(data.user.isVerified);
+        // Admins bypass email verification requirement
+        setIsEmailVerified(data.user.isVerified || data.user.isAdmin);
         return { success: true, user: data.user };
       }
       
@@ -79,7 +80,8 @@ export function useAuth() {
       if (data.success && data.token) {
         setToken(data.token);
         setIsAuthenticated(true);
-        setIsEmailVerified(data.user.isVerified);
+        // Admins bypass email verification requirement
+        setIsEmailVerified(data.user.isVerified || data.user.isAdmin);
         return { success: true, user: data.user };
       }
       

@@ -89,8 +89,13 @@ export async function authMiddleware(req: Request & { user?: AuthUser }, res: Re
   }
 }
 
-// Check if user is verified
+// Check if user is verified (admins bypass this requirement)
 export function requireVerified(req: Request & { user?: AuthUser }, res: Response, next: NextFunction) {
+  // Admins can bypass email verification requirement
+  if (req.user?.isAdmin) {
+    return next();
+  }
+  
   if (!req.user?.isVerified) {
     return res.status(403).json({ error: 'Email verification required' });
   }
