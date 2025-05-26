@@ -514,10 +514,10 @@ export default function ChannelPage() {
             {showBuffering && (
               <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center rounded-lg">
                 <div className="text-center space-y-3 px-4">
-                  {/* Responsive purple spinning circle */}
-                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 mx-auto">
-                    <div className="absolute inset-0 border-3 sm:border-4 border-gray-700/30 rounded-full"></div>
-                    <div className="absolute inset-0 border-3 sm:border-4 border-transparent border-t-purple-500 border-r-purple-400 rounded-full animate-spin"></div>
+                  {/* Mobile-friendly responsive spinner */}
+                  <div className="relative w-10 h-10 sm:w-16 sm:h-16 mx-auto">
+                    <div className="absolute inset-0 border-2 sm:border-4 border-purple-300/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-2 sm:border-4 border-transparent border-t-purple-600 border-r-purple-500 rounded-full animate-spin"></div>
                   </div>
                   {/* Responsive buffering text */}
                   <p className="text-white text-sm sm:text-lg font-medium tracking-wide">Connecting stream...</p>
