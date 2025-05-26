@@ -27,6 +27,7 @@ import streamSourcesRoutes from './routes/streamSources';
 import streamUrlEditorRoutes from './routes/streamUrlEditor';
 import directStreamUrlRoutes from './routes/directStreamUrl';
 import { handleInitStreamSources } from './routes/initStreamSources';
+import redisAdminRoutes from './routes/redisAdmin';
 import { 
   parseM3U8ToStreamMap, 
   getDynamicStreamUrl, 

@@ -7,6 +7,7 @@ import { initEmailService } from './emailService';
 import session from 'express-session';
 import { setupRequiredTables } from './setupTables';
 import { startGameAlertScheduler } from './gameAlertScheduler';
+import './redis'; // Initialize Redis connection
 
 // Load environment variables
 dotenv.config();
