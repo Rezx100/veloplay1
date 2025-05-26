@@ -235,10 +235,10 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           </div>
         </div>
 
-        {/* Main Content - Mobile Optimized Layout */}
+        {/* Main Content - Screenshot-Matching Mobile Design */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-3 sm:py-0">
-          {/* Team Matchup - Compact Mobile Design */}
-          <div className="flex items-center justify-between w-full max-w-sm sm:max-w-none sm:gap-16 mb-6 sm:mb-12">
+          {/* Team Matchup - Screenshot Style */}
+          <div className="flex items-center justify-between w-full max-w-sm sm:max-w-none sm:gap-16 mb-8 sm:mb-12">
             {/* Away Team */}
             <div className="text-center flex-1">
               <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
@@ -249,7 +249,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 />
               </div>
               <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
+              <p className="text-gray-300 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
             </div>
             
             {/* VS Section - Centered */}
@@ -267,46 +267,46 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 />
               </div>
               <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
+              <p className="text-gray-300 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
             </div>
           </div>
 
-          {/* Countdown Timer - Prominent */}
-          <div className="text-center mb-6 sm:mb-12">
-            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
+          {/* Countdown Timer - Large & Prominent */}
+          <div className="text-center mb-8 sm:mb-12">
+            <div className="text-5xl sm:text-6xl font-bold text-white mb-3 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
               {timeRemaining}
             </div>
-            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
+            <p className="text-gray-300 text-lg sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Details - Stacked on Mobile */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 mb-4 sm:mb-8 w-full max-w-md sm:max-w-none">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto sm:min-w-[140px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <Clock className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto sm:min-w-[180px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
-              </div>
+          {/* Game Time Card */}
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 mb-4 w-full max-w-xs sm:max-w-none sm:min-w-[200px]">
+            <div className="flex items-center justify-center gap-3 text-white">
+              <Clock className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-base sm:text-base">{formatGameTime()}</span>
             </div>
           </div>
 
-          {/* Broadcast Info */}
+          {/* Venue Card */}
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4 mb-6 w-full max-w-xs sm:max-w-none sm:min-w-[250px]">
+            <div className="flex items-center justify-center gap-3 text-white">
+              <MapPin className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-base sm:text-base">{game.venue.name}</span>
+            </div>
+          </div>
+
+          {/* Available On Section - Screenshot Style */}
           {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
-            <div className="mb-2 sm:mb-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3">
-                <Tv className="w-4 h-4 text-white" />
-                <span className="text-white font-medium text-sm sm:text-base">Available On</span>
+            <div className="text-center w-full max-w-xs sm:max-w-none">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-white" />
+                <span className="text-white font-medium text-base">Available On</span>
               </div>
-              <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
+              <div className="flex flex-col gap-3 items-center">
                 {nationalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-blue-600/30 text-blue-200 border-blue-400/50 backdrop-blur-sm text-xs sm:text-sm"
+                    className="bg-purple-600/40 text-purple-200 border-purple-400/50 backdrop-blur-sm px-6 py-2 text-sm font-medium rounded-full"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
@@ -314,7 +314,7 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 {regionalBroadcasts.map((broadcast, index) => (
                   <Badge 
                     key={index} 
-                    className="bg-purple-600/30 text-purple-200 border-purple-400/50 backdrop-blur-sm text-xs sm:text-sm"
+                    className="bg-gray-600/40 text-gray-200 border-gray-400/50 backdrop-blur-sm px-6 py-2 text-sm font-medium rounded-full"
                   >
                     {broadcast.name || broadcast.callLetters}
                   </Badge>
