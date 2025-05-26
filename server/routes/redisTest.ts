@@ -1,67 +1,45 @@
-import express from 'express';
-import { RedisCache, redis } from '../redis';
+import { Router } from 'express';
+import { redis } from '../redis.js';
 
-const router = express.Router();
+const router = Router();
 
 // Simple Redis test endpoint
-router.get('/test', async (req, res) => {
+router.get('/redis-test', async (req, res) => {
   try {
-    // Test basic Redis operations
-    const testKey = 'test:' + Date.now();
-    const testValue = { message: 'Redis is working!', timestamp: new Date().toISOString() };
+    console.log('🧪 Testing Redis connection via API endpoint...');
     
-    // Set a value
-    await RedisCache.set(testKey, testValue, 60); // 60 seconds TTL
-    
-    // Get the value back
-    const retrieved = await RedisCache.get(testKey);
-    
-    // Test Redis connection directly
+    // Test 1: Ping
     const pingResult = await redis.ping();
+    console.log('✅ Redis PING result:', pingResult);
+    
+    // Test 2: Set and Get
+    const testKey = `test-${Date.now()}`;
+    await redis.set(testKey, 'VeloPlay Redis Test!', 'EX', 60); // Expires in 60 seconds
+    const getValue = await redis.get(testKey);
+    console.log('✅ Redis SET/GET result:', getValue);
+    
+    // Test 3: Check Redis info
+    const info = await redis.info('server');
+    console.log('✅ Redis server info available');
     
     res.json({
-      status: 'success',
-      redis_connected: true,
-      ping_result: pingResult,
-      test_data: {
-        stored: testValue,
-        retrieved: retrieved,
-        matches: JSON.stringify(testValue) === JSON.stringify(retrieved)
+      success: true,
+      message: 'Redis is working perfectly!',
+      tests: {
+        ping: pingResult,
+        setGet: getValue,
+        serverInfo: 'Available'
       },
-      message: 'Redis is working perfectly with VeloPlay!'
+      timestamp: new Date().toISOString()
     });
     
-  } catch (error) {
+  } catch (error: any) {
+    console.log('❌ Redis test failed:', error.message);
     res.status(500).json({
-      status: 'error',
-      redis_connected: false,
+      success: false,
+      message: 'Redis connection failed',
       error: error.message,
-      message: 'Redis connection failed'
-    });
-  }
-});
-
-// Check cache status
-router.get('/cache-status', async (req, res) => {
-  try {
-    const keys = await redis.keys('*');
-    const info = await redis.info('memory');
-    
-    res.json({
-      total_keys: keys.length,
-      cache_keys: {
-        games: keys.filter(k => k.startsWith('all-games:')).length,
-        individual_games: keys.filter(k => k.startsWith('game:')).length,
-        streams: keys.filter(k => k.startsWith('stream:')).length,
-        users: keys.filter(k => k.startsWith('user:')).length
-      },
-      memory_info: info,
-      sample_keys: keys.slice(0, 10)
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: error.message,
-      message: 'Failed to get cache status'
+      timestamp: new Date().toISOString()
     });
   }
 });

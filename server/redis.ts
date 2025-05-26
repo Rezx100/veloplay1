@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 
-// Redis Cloud configuration
+// Redis Cloud configuration with proper TLS settings
 const redisConfig = {
   host: process.env.REDIS_HOST || 'redis-18177.c322.us-east-1-2.ec2.redns.redis-cloud.com',
   port: parseInt(process.env.REDIS_PORT || '18177'),
@@ -10,7 +10,10 @@ const redisConfig = {
   maxRetriesPerRequest: 3,
   lazyConnect: true,
   connectTimeout: 10000,
-  tls: {}, // Redis Cloud requires TLS
+  tls: {
+    rejectUnauthorized: false,
+    servername: process.env.REDIS_HOST || 'redis-18177.c322.us-east-1-2.ec2.redns.redis-cloud.com'
+  },
 };
 
 // Create Redis client
