@@ -503,7 +503,6 @@ export default function ChannelPage() {
               ref={videoRef} 
               className="w-full h-full object-contain bg-black rounded-lg" 
               autoPlay 
-              muted
               playsInline
               webkit-playsinline="true"
               onClick={togglePlay}
