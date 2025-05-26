@@ -92,8 +92,15 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       try {
         console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the apiRequest helper for proper authentication
-        const response = await apiRequest('GET', `/api/game-alerts/${gameId}?t=${Date.now()}`);
+        // Use the proper API endpoint with authentication and cache busting
+        const response = await fetch(`/api/game-alerts/${gameId}?t=${Date.now()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          credentials: 'include',
+        });
 
         if (response.ok) {
           const result = await response.json();
@@ -175,20 +182,13 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       // Handle both success and "already exists" cases
       const success = !error || error.code === '23505' || error.code === 'PGRST409';
       
-      if (error && ['23505', 'PGRST409'].includes(error.code)) {
-        // Alert already exists - show informative message
-        console.log('Alert already exists for this game');
-        toast({
-          title: 'Alert Already Set',
-          description: `You already have an alert set for this game. You'll be notified ${notifyMinutesBefore} minutes before ${gameName} starts.`,
-          variant: 'default',
-        });
-        setIsDialogOpen(false);
-      } else if (error) {
+      if (error && !['23505', 'PGRST409'].includes(error.code)) {
         console.error('Unexpected Supabase error:', error);
         throw error;
-      } else {
-        // Alert created successfully
+      }
+        
+      if (success) {
+        // Alert created or already exists - keep UI state as "alert set"
         console.log('Alert successfully saved to database');
         toast({
           title: 'Game Alert Set',
@@ -196,6 +196,17 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
           variant: 'default',
         });
         setIsDialogOpen(false);
+      } else {
+        // Handle error
+        console.error('Supabase error setting alert:', error);
+        
+        // Only show error if there's a real problem, and revert the UI
+        setHasAlert(false);
+        toast({
+          title: 'Error Setting Alert',
+          description: 'Database error when setting game alert. Please try again.',
+          variant: 'destructive',
+        });
       }
       
     } catch (error) {

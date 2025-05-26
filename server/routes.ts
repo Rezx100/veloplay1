@@ -3557,7 +3557,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
+  // Check if user has alert for specific game
+  app.get('/api/game-alerts/:gameId', async (req, res) => {
+    try {
+      // Get user ID from session or hardcode for testing
+      const userId = req.session?.passport?.user || 'e72ece9e-11e3-452b-ab22-e0a4c52facb0';
+      const gameId = req.params.gameId;
+      
+      console.log('🔍 Checking alert for user:', userId, 'game:', gameId);
+      
+      const alert = await storage.getGameAlertByUserAndGame(userId, gameId);
+      console.log('🎯 Alert found:', alert);
+      
+      return res.json({ exists: !!alert, alert: alert || null });
+    } catch (error) {
+      console.error('Error checking game alert:', error);
+      return res.status(500).json({ error: 'Failed to check game alert' });
+    }
+  });
 
   // Simple test route to verify routing works
   app.get('/api/test-routing', (req, res) => {
@@ -3646,10 +3663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { gameId } = req.params;
       const userId = req.user?.id;
       
-      console.log('🔍 Checking alert for user:', userId, 'game:', gameId);
-      
       if (!userId) {
-        console.log('❌ User not authenticated');
         return res.status(401).json({ 
           exists: false,
           error: 'User not authenticated' 
@@ -3658,7 +3672,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the specific alert for this user and game
       const alert = await storage.getGameAlertByUserAndGame(userId, gameId);
-      console.log('🎯 Alert found:', alert);
       
       return res.json({ 
         exists: !!alert,
@@ -3700,7 +3713,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
+  // Check if a game alert exists for a user
+  app.get('/api/game-alerts/:gameId', isAuthenticated, async (req, res) => {
+    try {
+      const gameId = req.params.gameId;
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      if (!gameId) {
+        return res.status(400).json({ error: 'Game ID is required' });
+      }
+      
+      const alert = await storage.getGameAlertByUserAndGame(userId, gameId);
+      
+      if (!alert) {
+        return res.status(404).json({ 
+          exists: false,
+          message: 'No alert found for this game' 
+        });
+      }
+      
+      return res.status(200).json({
+        exists: true,
+        alert
+      });
+    } catch (error) {
+      console.error('Error checking game alert:', error);
+      return res.status(500).json({ error: 'Failed to check game alert' });
+    }
+  });
 
   // User dashboard statistics endpoint
   app.get('/api/user/dashboard-stats', isAuthenticated, async (req, res) => {
