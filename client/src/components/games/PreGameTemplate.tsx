@@ -272,37 +272,72 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
 
         {/* Main Content - Mobile-First Stacked Design */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6">
-          {/* Team Matchup - Compact on Mobile */}
-          <div className="flex items-center justify-center gap-6 sm:gap-16 mb-6 sm:mb-8">
-            {/* Away Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 sm:w-32 sm:h-32 mx-auto mb-2 sm:mb-4 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                <img 
-                  src={game.awayTeam.logo} 
-                  alt={game.awayTeam.name}
-                  className="w-12 h-12 sm:w-24 sm:h-24 object-contain"
-                />
+          {/* Team Matchup - Mobile: Stacked, Desktop: Horizontal */}
+          <div className="mb-6 sm:mb-8">
+            {/* Mobile Stack Layout */}
+            <div className="flex flex-col items-center gap-4 sm:hidden">
+              {/* Away Team */}
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto mb-3 bg-white/10 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.awayTeam.logo} 
+                    alt={game.awayTeam.name}
+                    className="w-14 h-14 object-contain"
+                  />
+                </div>
+                <h3 className="font-bold text-white text-lg mb-1">{game.awayTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-sm font-medium">{game.awayTeam.name}</p>
               </div>
-              <h3 className="font-bold text-white text-base sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-base font-medium">{game.awayTeam.name}</p>
-            </div>
-            
-            {/* VS Section */}
-            <div className="px-1 sm:px-4">
-              <div className="text-xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
-            </div>
-            
-            {/* Home Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 sm:w-32 sm:h-32 mx-auto mb-2 sm:mb-4 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                <img 
-                  src={game.homeTeam.logo} 
-                  alt={game.homeTeam.name}
-                  className="w-12 h-12 sm:w-24 sm:h-24 object-contain"
-                />
+              
+              {/* VS */}
+              <div className="text-2xl font-bold text-white/90 tracking-wider py-2">VS</div>
+              
+              {/* Home Team */}
+              <div className="text-center">
+                <div className="w-20 h-20 mx-auto mb-3 bg-white/10 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.homeTeam.logo} 
+                    alt={game.homeTeam.name}
+                    className="w-14 h-14 object-contain"
+                  />
+                </div>
+                <h3 className="font-bold text-white text-lg mb-1">{game.homeTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-sm font-medium">{game.homeTeam.name}</p>
               </div>
-              <h3 className="font-bold text-white text-base sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-base font-medium">{game.homeTeam.name}</p>
+            </div>
+
+            {/* Desktop Horizontal Layout */}
+            <div className="hidden sm:flex items-center justify-center gap-16">
+              {/* Away Team */}
+              <div className="text-center">
+                <div className="w-32 h-32 mx-auto mb-4 bg-white/10 rounded-full p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.awayTeam.logo} 
+                    alt={game.awayTeam.name}
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <h3 className="font-bold text-white text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-base font-medium">{game.awayTeam.name}</p>
+              </div>
+              
+              {/* VS Section */}
+              <div className="px-4">
+                <div className="text-5xl font-bold text-white/90 tracking-wider">VS</div>
+              </div>
+              
+              {/* Home Team */}
+              <div className="text-center">
+                <div className="w-32 h-32 mx-auto mb-4 bg-white/10 rounded-full p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <img 
+                    src={game.homeTeam.logo} 
+                    alt={game.homeTeam.name}
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <h3 className="font-bold text-white text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
+                <p className="text-purple-200 text-base font-medium">{game.homeTeam.name}</p>
+              </div>
             </div>
           </div>
 
