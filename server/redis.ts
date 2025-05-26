@@ -1,13 +1,15 @@
 import Redis from 'ioredis';
 
-// Redis configuration
+// Redis configuration with better error handling for development
 const redisConfig = {
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,
   retryDelayOnFailover: 100,
   enableReadyCheck: false,
-  maxRetriesPerRequest: null,
+  maxRetriesPerRequest: 3,
+  lazyConnect: true, // Don't connect immediately
+  connectTimeout: 10000,
 };
 
 // Create Redis client
@@ -37,10 +39,12 @@ export class RedisCache {
     try {
       const key = `game:${gameId}`;
       await redis.setex(key, ttlSeconds, JSON.stringify(gameData));
-      console.log(`📦 Cached game data for ${gameId}`);
+      console.log(`📦 Redis: Cached game data for ${gameId}`);
     } catch (error) {
-      console.error('Error caching game data:', error);
+      console.log(`⚠️ Redis not available, skipping cache for game ${gameId}`);
+      return false;
     }
+    return true;
   }
 
   static async getGameData(gameId: string) {
