@@ -273,36 +273,22 @@ export default function ChannelPage() {
             videoRef.current.autoplay = true;
             videoRef.current.preload = 'auto';
             
-            // For mobile, always start muted for better autoplay success
-            if (isMobile) {
-              videoRef.current.muted = true;
-              videoRef.current.setAttribute('muted', 'true');
-            }
-            
             try {
-              // For mobile, try muted autoplay first (higher success rate)
-              if (isMobile) {
-                videoRef.current.muted = true;
-                await videoRef.current.play();
-                console.log('[VideoPlayer] ✅ Mobile muted autoplay successful - tap to unmute');
-                setShowBuffering(false);
-                setIsInitialLoad(false);
-              } else {
-                // Desktop: try direct play first
-                await videoRef.current.play();
-                console.log('[VideoPlayer] ✅ Desktop autoplay successful');
-                setShowBuffering(false);
-                setIsInitialLoad(false);
-              }
+              // Always try unmuted autoplay first for best user experience
+              videoRef.current.muted = false;
+              await videoRef.current.play();
+              console.log('[VideoPlayer] ✅ Unmuted autoplay successful');
+              setShowBuffering(false);
+              setIsInitialLoad(false);
             } catch (firstError) {
-              console.log('[VideoPlayer] ⚠️ Initial autoplay blocked, trying fallback...');
+              console.log('[VideoPlayer] ⚠️ Unmuted autoplay blocked, trying muted...');
               
               try {
-                // Fallback: always try muted autoplay
+                // Fallback: muted autoplay (required by most mobile browsers)
                 videoRef.current.muted = true;
                 videoRef.current.setAttribute('muted', 'true');
                 await videoRef.current.play();
-                console.log('[VideoPlayer] ✅ Muted autoplay successful - tap to unmute');
+                console.log('[VideoPlayer] ✅ Muted autoplay successful - tap speaker to unmute');
                 setShowBuffering(false);
                 setIsInitialLoad(false);
               } catch (secondError) {
@@ -310,18 +296,17 @@ export default function ChannelPage() {
                 
                 try {
                   // Final try: load first, then play muted
-                  videoRef.current.muted = true;
                   videoRef.current.load();
                   await new Promise(resolve => setTimeout(resolve, 200));
+                  videoRef.current.muted = true;
                   await videoRef.current.play();
                   console.log('[VideoPlayer] ✅ Load + muted play successful');
                   setShowBuffering(false);
                   setIsInitialLoad(false);
                 } catch (thirdError) {
-                  console.log('[VideoPlayer] ⚠️ All autoplay attempts failed, showing manual play button');
+                  console.log('[VideoPlayer] ⚠️ All autoplay attempts failed, waiting for user interaction');
                   setShowBuffering(false);
                   setIsInitialLoad(false);
-                  // Show manual play button for user interaction
                 }
               }
             }
@@ -503,7 +488,6 @@ export default function ChannelPage() {
               ref={videoRef} 
               className="w-full h-full object-contain bg-black rounded-lg" 
               autoPlay 
-              muted
               playsInline
               webkit-playsinline="true"
               onClick={togglePlay}
