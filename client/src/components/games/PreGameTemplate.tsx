@@ -183,9 +183,9 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       {/* Content Layer */}
       <div className="relative z-10 h-full flex flex-col">
         {/* Mobile Layout */}
-        <div className="sm:hidden h-full flex flex-col">
+        <div className="sm:hidden h-full flex flex-col justify-between p-4">
           {/* Top Header with League Badge and Alert Button */}
-          <div className="flex justify-between items-start p-4">
+          <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
               {getLeagueIcon()}
               <Badge className={`text-white font-bold px-3 py-1 text-sm border-0 ${
@@ -205,12 +205,11 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-sm px-3"
+                  className="bg-green-400/20 border-green-400/50 text-green-300 hover:bg-green-400/30 backdrop-blur-sm transition-all duration-200 text-xs px-2"
                   disabled
                 >
-                  <Bell className="mr-2 h-4 w-4 fill-current animate-bell-ring" />
-                  Alert
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                  <Bell className="mr-1 h-3 w-3 fill-current animate-bell-ring" />
+                  Set
                 </Button>
               ) : (
                 <DropdownMenu>
@@ -218,11 +217,11 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-sm px-3"
+                      className="bg-black/40 backdrop-blur-sm border-white/20 text-white hover:bg-black/50 text-xs px-2"
                     >
-                      <Bell className="mr-2 h-4 w-4" />
-                      Alert
-                      <ChevronDown className="ml-2 h-4 w-4" />
+                      <Bell className="mr-1 h-3 w-3" />
+                      Set
+                      <ChevronDown className="ml-1 h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -251,96 +250,126 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           </div>
 
           {/* Team Matchup */}
-          <div className="flex items-center justify-center gap-6 mb-8 px-4">
+          <div className="flex items-center justify-center gap-4 mb-6">
             {/* Away Team */}
             <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-3 bg-gray-700/50 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
+              <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
                 <img 
                   src={game.awayTeam.logo} 
                   alt={game.awayTeam.name}
-                  className="w-14 h-14 object-contain"
+                  className="w-12 h-12 object-contain"
                 />
               </div>
-              <h3 className="font-bold text-white text-xl mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-gray-300 text-sm">{game.awayTeam.name}</p>
+              <h3 className="font-bold text-white text-lg mb-1">{game.awayTeam.abbreviation}</h3>
             </div>
             
             {/* VS Section */}
-            <div className="px-4">
-              <div className="text-2xl font-bold text-white/90 tracking-wider">VS</div>
+            <div className="px-3">
+              <div className="text-xl font-bold text-white/90 tracking-wider">VS</div>
             </div>
             
             {/* Home Team */}
             <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-3 bg-gray-700/50 rounded-full p-3 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
+              <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
                 <img 
                   src={game.homeTeam.logo} 
                   alt={game.homeTeam.name}
-                  className="w-14 h-14 object-contain"
+                  className="w-12 h-12 object-contain"
                 />
               </div>
-              <h3 className="font-bold text-white text-xl mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-gray-300 text-sm">{game.homeTeam.name}</p>
+              <h3 className="font-bold text-white text-lg mb-1">{game.homeTeam.abbreviation}</h3>
             </div>
           </div>
 
-          {/* Countdown Timer */}
-          <div className="text-center mb-8">
-            <div className="text-4xl font-bold text-white mb-2 font-mono tracking-wide">
-              {timeRemaining}
-            </div>
-            <p className="text-gray-300 text-lg">Until Game Time</p>
-          </div>
-
-          {/* Game Time */}
-          <div className="flex justify-center mb-4">
-            <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-6 py-3">
-              <div className="flex items-center gap-2 text-white">
-                <Clock className="w-5 h-5" />
-                <span className="font-medium text-lg">{formatGameTime()}</span>
-              </div>
-            </div>
+          {/* Game Title */}
+          <div className="text-center mb-4">
+            <h2 className="text-white text-lg font-semibold leading-tight">
+              {game.awayTeam.name} vs {game.homeTeam.name}
+            </h2>
           </div>
 
           {/* Venue */}
-          <div className="flex justify-center mb-6">
-            <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-6 py-3 max-w-xs">
-              <div className="flex items-center gap-2 text-white">
-                <MapPin className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium text-lg text-center">{game.venue.name}</span>
-              </div>
+          <div className="text-center mb-4">
+            <div className="flex items-center justify-center gap-2 text-gray-300">
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{game.venue.name}</span>
             </div>
           </div>
 
-          {/* Broadcast Info */}
-          {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
-            <div className="text-center px-4">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
-                  <Tv className="w-4 h-4 text-black" />
-                </div>
-                <span className="text-white font-medium text-lg">Available On</span>
+          {/* Game Details Section */}
+          <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 mb-4 border border-white/10">
+            {/* Score Display (0-0 for pre-game) */}
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <img src={game.awayTeam.logo} alt={game.awayTeam.name} className="w-8 h-8" />
+                <span className="text-white font-bold text-sm">{game.awayTeam.abbreviation}</span>
               </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {nationalBroadcasts.map((broadcast, index) => (
-                  <Badge 
-                    key={index} 
-                    className="bg-purple-600 text-white border-0 text-sm px-4 py-2 font-medium"
-                  >
-                    {broadcast.name || broadcast.callLetters}
-                  </Badge>
-                ))}
-                {regionalBroadcasts.map((broadcast, index) => (
-                  <Badge 
-                    key={index} 
-                    className="bg-purple-600 text-white border-0 text-sm px-4 py-2 font-medium"
-                  >
-                    {broadcast.name || broadcast.callLetters}
-                  </Badge>
-                ))}
+              <div className="text-purple-400 font-bold text-2xl">0</div>
+              <div className="text-purple-400 font-bold text-2xl">0</div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-bold text-sm">{game.homeTeam.abbreviation}</span>
+                <img src={game.homeTeam.logo} alt={game.homeTeam.name} className="w-8 h-8" />
               </div>
             </div>
-          )}
+            
+            {/* Game Status */}
+            <div className="text-center">
+              <div className="text-gray-400 text-xs mb-1">P0 • 0:00</div>
+            </div>
+          </div>
+
+          {/* About This Game Section */}
+          <div className="mb-4">
+            <h3 className="text-white text-lg font-semibold mb-3">About This Game</h3>
+            
+            {/* Countdown Timer */}
+            <div className="text-center mb-4">
+              <div className="text-3xl font-bold text-white mb-1 font-mono tracking-wide">
+                {timeRemaining}
+              </div>
+              <p className="text-gray-300 text-sm">Until Game Time</p>
+            </div>
+
+            {/* Game Time */}
+            <div className="flex justify-center mb-3">
+              <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-4 py-2">
+                <div className="flex items-center gap-2 text-white">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium text-sm">{formatGameTime()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Broadcast Info */}
+            {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
+                    <Tv className="w-3 h-3 text-black" />
+                  </div>
+                  <span className="text-white font-medium text-sm">Available On</span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {nationalBroadcasts.map((broadcast, index) => (
+                    <Badge 
+                      key={index} 
+                      className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
+                    >
+                      {broadcast.name || broadcast.callLetters}
+                    </Badge>
+                  ))}
+                  {regionalBroadcasts.map((broadcast, index) => (
+                    <Badge 
+                      key={index} 
+                      className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
+                    >
+                      {broadcast.name || broadcast.callLetters}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Desktop Layout (unchanged) */}
