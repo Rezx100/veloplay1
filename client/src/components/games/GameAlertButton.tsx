@@ -189,12 +189,14 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       console.log('💾 Attempting to save alert to database:', alertData);
 
       // First check if there's an existing alert for this user and game
-      const { data: existingAlert } = await supabase
+      const { data: existingAlert, error: checkError } = await supabase
         .from('game_alerts')
         .select('*')
         .eq('user_id', user?.id)
         .eq('game_id', gameId)
-        .single();
+        .maybeSingle();
+
+      console.log('💾 Existing alert check:', { existingAlert, checkError });
 
       let data, error;
 
