@@ -92,21 +92,27 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       try {
         console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the apiRequest helper for proper authentication
-        const response = await apiRequest('GET', `/api/game-alerts/${gameId}?t=${Date.now()}`);
+        // Check directly with Supabase since backend auth isn't working properly
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          import.meta.env.VITE_SUPABASE_URL!,
+          import.meta.env.VITE_SUPABASE_ANON_KEY!
+        );
 
-        if (response.ok) {
-          const result = await response.json();
-          console.log('🎯 Alert check result:', result);
-          
-          if (isMounted) {
-            setHasAlert(result.exists);
-            console.log(`🚨 Alert status set to: ${result.exists ? 'HAS ALERT' : 'NO ALERT'}`);
-          }
-        } else {
-          console.error('❌ Failed to check alert status:', response.status);
-          if (isMounted) {
+        const { data, error } = await supabase
+          .from('game_alerts')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('game_id', gameId)
+          .single();
+
+        if (isMounted) {
+          if (data && !error) {
+            setHasAlert(true);
+            console.log(`🚨 Alert status set to: HAS ALERT`);
+          } else {
             setHasAlert(false);
+            console.log(`🚨 Alert status set to: NO ALERT`);
           }
         }
       } catch (error) {
