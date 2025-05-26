@@ -1,7 +1,7 @@
 import { Game } from "@shared/schema";
 import fetch from "node-fetch";
 import { format } from "date-fns";
-// Remove Supabase import - using Neon database now
+import { supabase } from "./db";
 
 const ESPN_API_BASE = "https://site.api.espn.com/apis/v2/scoreboard/header";
 

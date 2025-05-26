@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { supabase, getCurrentUser, getSession, isEmailVerified } from "@/lib/supabaseClient";
 import { User } from "@shared/schema";
 
 // Define the shape of the combined user data that we return from this hook
@@ -17,13 +18,9 @@ export function useAuth() {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isEmailVerified, setIsEmailVerified] = useState(true);
+  const [isEmailVerified, setIsEmailVerified] = useState(true); // Default to true to prevent logout
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
   
-  // Get JWT token from localStorage
-  const getToken = () => localStorage.getItem('auth_token');
-  const setToken = (token: string) => localStorage.setItem('auth_token', token);
-  const removeToken = () => localStorage.removeItem('auth_token');
-
   // Try to get profile from database if authenticated
   const { data: userProfile, isLoading: isProfileLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
@@ -32,91 +29,135 @@ export function useAuth() {
     refetchOnWindowFocus: false,
   });
 
-  // Check authentication status on mount
+  // SECURITY FIX: Server-only verification check
+  async function checkEmailVerification(email: string | undefined): Promise<boolean> {
+    if (!email) return false;
+    
+    try {
+      // Get the current auth token to pass to the server
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        console.log("No auth token available for verification check");
+        return false;
+      }
+      
+      // Check with server API for real verification status
+      const response = await fetch('/api/auth/check-verification-status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const isVerified = result.verified === true;
+        console.log(`Server verification check for ${email}: ${isVerified ? 'VERIFIED' : 'NOT VERIFIED'}`);
+        return isVerified;
+      } else {
+        console.log("Server verification check failed");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking verification with server:", error);
+      return false;
+    }
+  }
+
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
-  }, []);
+    async function getUser() {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (error || !data.user) {
+          setIsAuthenticated(false);
+          setSupabaseUser(null);
+          setIsEmailVerified(false);
+          setIsLoading(false);
+          return;
+        }
 
-  // Login function
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.token) {
-        setToken(data.token);
+        const user = data.user;
         setIsAuthenticated(true);
-        // Admins bypass email verification requirement
-        setIsEmailVerified(data.user.isVerified || data.user.isAdmin);
-        return { success: true, user: data.user };
+        setSupabaseUser(user);
+
+        // Check email verification status
+        if (user.email) {
+          // Check local cache first for faster loading
+          const cachedVerification = localStorage.getItem('email_verified');
+          if (cachedVerification === 'true') {
+            setIsEmailVerified(true);
+            console.log(`Using cached verification for: ${user.email}`);
+          } else {
+            // Do async verification check without blocking UI or forcing logout
+            checkEmailVerification(user.email).then(verified => {
+              setIsEmailVerified(verified);
+              
+              if (verified) {
+                localStorage.setItem('email_verified', 'true');
+                console.log(`Email verified: ${user.email}`);
+              } else {
+                console.log(`Email not verified for: ${user.email}`);
+                // Don't force logout - let PrivateRoute handle this gracefully
+              }
+            }).catch(error => {
+              console.error("Error in verification check:", error);
+              // Don't change verification status on error - maintain current state
+            });
+          }
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+        setSupabaseUser(null);
+        setIsEmailVerified(false);
+        setIsLoading(false);
       }
-      
-      return { success: false, error: data.error || 'Login failed' };
-    } catch (error) {
-      return { success: false, error: 'Network error' };
     }
-  };
 
-  // Signup function
-  const signup = async (email: string, password: string, firstName: string, lastName: string) => {
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName, lastName }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.token) {
-        setToken(data.token);
-        setIsAuthenticated(true);
-        // Admins bypass email verification requirement
-        setIsEmailVerified(data.user.isVerified || data.user.isAdmin);
-        return { success: true, user: data.user };
+    getUser();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setIsAuthenticated(false);
+          setSupabaseUser(null);
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setIsAuthenticated(true);
+          setSupabaseUser(session.user);
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
       }
-      
-      return { success: false, error: data.error || 'Signup failed' };
-    } catch (error) {
-      return { success: false, error: 'Network error' };
-    }
-  };
+    );
 
-  // Logout function
-  const logout = () => {
-    removeToken();
-    setIsAuthenticated(false);
-    setIsEmailVerified(false);
-    queryClient.clear();
-  };
+    return () => subscription.unsubscribe();
+  }, [queryClient]);
 
-  // Combine user data from different sources
-  const user: CombinedUserData | null = userProfile ? {
-    id: userProfile.id,
-    email: userProfile.email || '',
-    firstName: userProfile.firstName,
-    lastName: userProfile.lastName,
-    profileImageUrl: userProfile.profileImageUrl,
-    fullName: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 'User',
-    isAdmin: userProfile.isAdmin || false,
+  // Combine user data from Supabase and our database
+  const user: CombinedUserData | null = isAuthenticated && supabaseUser ? {
+    ...userProfile,
+    ...supabaseUser,
+    fullName: userProfile?.firstName && supabaseUser ? 
+      `${userProfile.firstName}${userProfile.lastName ? ` ${userProfile.lastName}` : ''}` :
+      supabaseUser.user_metadata?.full_name || 
+      `${supabaseUser.user_metadata?.first_name || ''} ${supabaseUser.user_metadata?.last_name || ''}`.trim() || 
+      supabaseUser.email || 'User',
+    isAdmin: userProfile?.isAdmin || false
   } : null;
 
   return {
-    user,
-    login,
-    signup,
-    logout,
-    isLoading: isLoading || isProfileLoading,
+    isLoading,
     isAuthenticated,
     isEmailVerified,
+    user,
+    supabaseUser,
+    isAdmin: user?.isAdmin || false,
   };
 }

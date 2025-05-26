@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { isAuthenticated } from '../supabaseAuth';
 import { isAdmin } from '../adminMiddleware';
-import { storage } from '../neonStorage';
+import { supabase } from '../db';
 // Import standardizeStreamUrl function from our consolidated file
 import { standardizeStreamUrl } from './streamSourcesLatestFixed';
 

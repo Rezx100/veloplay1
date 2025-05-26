@@ -15,17 +15,7 @@ import {
   type InsertStreamSource,
 } from "@shared/schema";
 import { NetworkChannel, NetworkChannelInsert } from "@shared/channelSchema";
-import { db } from "./db";
-import { eq, and } from "drizzle-orm";
-import { 
-  users, 
-  streams, 
-  subscriptions, 
-  subscriptionPlans, 
-  gameAlerts, 
-  networkChannels, 
-  streamSources 
-} from "@shared/schema";
+import { supabase } from "./db";
 
 // Interface for storage operations
 export interface IStorage {
