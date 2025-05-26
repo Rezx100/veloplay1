@@ -120,6 +120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const initStreamSourcesRoutes = await import('./routes/initStreamSources').then(m => m.default);
   const streamsRoutes = await import('./routes/streams').then(m => m.default);
   
+  // Register JWT authentication routes FIRST
+  app.use('/api/auth', authRoutes);
+  
   // Register the streamSourcesLatestFixed routes FIRST - this endpoint is public, no auth required
   app.use('/api/stream-sources/latest', streamSourcesLatestFixedRoutes);
   
