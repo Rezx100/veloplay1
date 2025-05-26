@@ -184,7 +184,10 @@ export default function SignupPage() {
         console.error("Error clearing session data after signup:", clearError);
       }
       
-
+      toast({
+        title: 'Account created',
+        description: 'Please check your inbox for the verification email. You should receive one or more emails with verification links. Check your spam folder if nothing appears within a few minutes.',
+      });
       setVerificationEmail(data.email);
       
     } catch (error) {

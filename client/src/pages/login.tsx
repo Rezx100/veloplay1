@@ -211,6 +211,12 @@ export default function LoginPage() {
         // Success! Show animation and redirect
         setIsLoading(false);
         
+        toast({
+          title: '🎉 Welcome back!',
+          description: 'You have successfully logged in to VeloPlay.',
+          variant: 'default',
+        });
+        
         // Start success animation sequence
         await showSuccessAnimation();
       } else {
