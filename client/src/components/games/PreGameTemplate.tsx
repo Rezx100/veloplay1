@@ -287,26 +287,31 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
             </div>
           </div>
 
-          {/* Countdown Timer - More Prominent */}
-          <div className="text-center mb-8 sm:mb-12">
-            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
-              {timeRemaining}
+          {/* Countdown Timer - Enhanced Mobile Visibility */}
+          <div className="text-center mb-6 sm:mb-12 px-4 w-full">
+            <div className="bg-black/40 backdrop-blur-sm rounded-xl px-4 py-6 sm:px-6 sm:py-8 border border-white/20 mb-4">
+              <div className="text-3xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
+                {timeRemaining}
+              </div>
+              <p className="text-purple-200 text-sm sm:text-xl font-medium">Until Game Time</p>
             </div>
-            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Details - Centered Cards */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[140px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <Clock className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
+          {/* Game Details - Enhanced Mobile Layout */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 mb-6 sm:mb-8 w-full max-w-md sm:max-w-none mx-auto">
+            {/* Game Time - More Prominent on Mobile */}
+            <div className="bg-white/15 backdrop-blur-sm border border-white/30 rounded-lg px-6 py-4 w-full sm:w-auto min-w-[160px] shadow-lg">
+              <div className="flex items-center justify-center gap-3 text-white">
+                <Clock className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 text-purple-300" />
+                <span className="font-bold text-lg sm:text-base">{formatGameTime()}</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 min-w-[180px]">
-              <div className="flex items-center justify-center gap-2 text-white">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
+            
+            {/* Venue */}
+            <div className="bg-white/15 backdrop-blur-sm border border-white/30 rounded-lg px-6 py-4 w-full sm:w-auto min-w-[200px] shadow-lg">
+              <div className="flex items-center justify-center gap-3 text-white">
+                <MapPin className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 text-purple-300" />
+                <span className="font-bold text-base sm:text-base truncate">{game.venue.name}</span>
               </div>
             </div>
           </div>
