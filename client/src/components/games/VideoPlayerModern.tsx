@@ -459,12 +459,31 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
   const toggleFullscreen = () => {
     if (!videoRef.current) return;
     
-    if (!document.fullscreenElement) {
-      videoRef.current.requestFullscreen().catch(err => {
-        console.error('Error attempting to enable fullscreen:', err);
-      });
+    // Mobile-first fullscreen approach
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // For mobile devices, use video element's native fullscreen
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen().catch(err => {
+          console.log('Mobile fullscreen not available:', err.message);
+        });
+      } else if ((videoRef.current as any).webkitRequestFullscreen) {
+        // iOS Safari fallback
+        (videoRef.current as any).webkitRequestFullscreen();
+      } else if ((videoRef.current as any).webkitEnterFullscreen) {
+        // iOS video-specific fullscreen
+        (videoRef.current as any).webkitEnterFullscreen();
+      }
     } else {
-      document.exitFullscreen();
+      // Desktop fullscreen logic
+      if (!document.fullscreenElement) {
+        videoRef.current.requestFullscreen().catch(err => {
+          console.error('Desktop fullscreen error:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
     }
   };
   
