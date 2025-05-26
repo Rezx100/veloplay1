@@ -182,10 +182,10 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       
       {/* Content Layer */}
       <div className="relative z-10 h-full flex flex-col">
-        {/* Mobile Layout */}
-        <div className="md:hidden h-full flex flex-col justify-between p-4">
-          {/* Top Header with League Badge and Alert Button */}
-          <div className="flex justify-between items-start mb-6">
+        {/* Mobile Layout - Force show on smaller screens */}
+        <div className="block lg:hidden h-full">
+          {/* Header */}
+          <div className="flex justify-between items-center p-4">
             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
               {getLeagueIcon()}
               <Badge className={`text-white font-bold px-3 py-1 text-sm border-0 ${
@@ -199,7 +199,6 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
               </Badge>
             </div>
             
-            {/* Alert Button */}
             <div className="flex-shrink-0">
               {hasAlert ? (
                 <Button
@@ -249,131 +248,131 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
             </div>
           </div>
 
-          {/* Team Matchup */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            {/* Away Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
-                <img 
-                  src={game.awayTeam.logo} 
-                  alt={game.awayTeam.name}
-                  className="w-12 h-12 object-contain"
-                />
-              </div>
-              <h3 className="font-bold text-white text-lg mb-1">{game.awayTeam.abbreviation}</h3>
-            </div>
-            
-            {/* VS Section */}
-            <div className="px-3">
-              <div className="text-xl font-bold text-white/90 tracking-wider">VS</div>
-            </div>
-            
-            {/* Home Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
-                <img 
-                  src={game.homeTeam.logo} 
-                  alt={game.homeTeam.name}
-                  className="w-12 h-12 object-contain"
-                />
-              </div>
-              <h3 className="font-bold text-white text-lg mb-1">{game.homeTeam.abbreviation}</h3>
-            </div>
-          </div>
-
-          {/* Game Title */}
-          <div className="text-center mb-4">
-            <h2 className="text-white text-lg font-semibold leading-tight">
-              {game.awayTeam.name} vs {game.homeTeam.name}
-            </h2>
-          </div>
-
-          {/* Venue */}
-          <div className="text-center mb-4">
-            <div className="flex items-center justify-center gap-2 text-gray-300">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{game.venue.name}</span>
-            </div>
-          </div>
-
-          {/* Game Details Section */}
-          <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 mb-4 border border-white/10">
-            {/* Score Display (0-0 for pre-game) */}
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <img src={game.awayTeam.logo} alt={game.awayTeam.name} className="w-8 h-8" />
-                <span className="text-white font-bold text-sm">{game.awayTeam.abbreviation}</span>
-              </div>
-              <div className="text-purple-400 font-bold text-2xl">0</div>
-              <div className="text-purple-400 font-bold text-2xl">0</div>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-bold text-sm">{game.homeTeam.abbreviation}</span>
-                <img src={game.homeTeam.logo} alt={game.homeTeam.name} className="w-8 h-8" />
-              </div>
-            </div>
-            
-            {/* Game Status */}
-            <div className="text-center">
-              <div className="text-gray-400 text-xs mb-1">P0 • 0:00</div>
-            </div>
-          </div>
-
-          {/* About This Game Section */}
-          <div className="mb-4">
-            <h3 className="text-white text-lg font-semibold mb-3">About This Game</h3>
-            
-            {/* Countdown Timer */}
-            <div className="text-center mb-4">
-              <div className="text-3xl font-bold text-white mb-1 font-mono tracking-wide">
-                {timeRemaining}
-              </div>
-              <p className="text-gray-300 text-sm">Until Game Time</p>
-            </div>
-
-            {/* Game Time */}
-            <div className="flex justify-center mb-3">
-              <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-4 py-2">
-                <div className="flex items-center gap-2 text-white">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-medium text-sm">{formatGameTime()}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Broadcast Info */}
-            {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
+          {/* Main Content */}
+          <div className="px-4 pb-4 space-y-4">
+            {/* Team Matchup */}
+            <div className="flex items-center justify-center gap-4">
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
-                    <Tv className="w-3 h-3 text-black" />
-                  </div>
-                  <span className="text-white font-medium text-sm">Available On</span>
+                <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
+                  <img 
+                    src={game.awayTeam.logo} 
+                    alt={game.awayTeam.name}
+                    className="w-12 h-12 object-contain"
+                  />
                 </div>
-                <div className="flex flex-wrap justify-center gap-1">
-                  {nationalBroadcasts.map((broadcast, index) => (
-                    <Badge 
-                      key={index} 
-                      className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
-                    >
-                      {broadcast.name || broadcast.callLetters}
-                    </Badge>
-                  ))}
-                  {regionalBroadcasts.map((broadcast, index) => (
-                    <Badge 
-                      key={index} 
-                      className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
-                    >
-                      {broadcast.name || broadcast.callLetters}
-                    </Badge>
-                  ))}
+                <h3 className="font-bold text-white text-lg">{game.awayTeam.abbreviation}</h3>
+              </div>
+              
+              <div className="px-3">
+                <div className="text-xl font-bold text-white/90 tracking-wider">VS</div>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-2 bg-gray-700/50 rounded-full p-2 flex items-center justify-center backdrop-blur-sm border border-gray-600/30">
+                  <img 
+                    src={game.homeTeam.logo} 
+                    alt={game.homeTeam.name}
+                    className="w-12 h-12 object-contain"
+                  />
+                </div>
+                <h3 className="font-bold text-white text-lg">{game.homeTeam.abbreviation}</h3>
+              </div>
+            </div>
+
+            {/* Game Title */}
+            <div className="text-center">
+              <h2 className="text-white text-lg font-semibold leading-tight">
+                {game.awayTeam.name} vs {game.homeTeam.name}
+              </h2>
+            </div>
+
+            {/* Venue */}
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 text-gray-300">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{game.venue.name}</span>
+              </div>
+            </div>
+
+            {/* Score Display (0-0 for pre-game) */}
+            <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-white/10">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <img src={game.awayTeam.logo} alt={game.awayTeam.name} className="w-8 h-8" />
+                  <span className="text-white font-bold text-sm">{game.awayTeam.abbreviation}</span>
+                </div>
+                <div className="text-purple-400 font-bold text-2xl">0</div>
+                <div className="text-purple-400 font-bold text-2xl">0</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-bold text-sm">{game.homeTeam.abbreviation}</span>
+                  <img src={game.homeTeam.logo} alt={game.homeTeam.name} className="w-8 h-8" />
                 </div>
               </div>
-            )}
+              
+              <div className="text-center">
+                <div className="text-gray-400 text-xs">P0 • 0:00</div>
+              </div>
+            </div>
+
+            {/* About This Game Section */}
+            <div>
+              <h3 className="text-white text-lg font-semibold mb-3">About This Game</h3>
+              
+              {/* COUNTDOWN TIMER - This should be visible! */}
+              <div className="bg-purple-600/20 backdrop-blur-sm rounded-lg p-4 mb-3 border border-purple-500/30">
+                <div className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-white mb-1 font-mono tracking-wide">
+                    {timeRemaining}
+                  </div>
+                  <p className="text-purple-200 text-sm">Until Game Time</p>
+                </div>
+              </div>
+
+              {/* Game Time */}
+              <div className="flex justify-center mb-3">
+                <div className="bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-2 text-white">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-medium text-sm">{formatGameTime()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Broadcast Info */}
+              {(nationalBroadcasts.length > 0 || regionalBroadcasts.length > 0) && (
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
+                      <Tv className="w-3 h-3 text-black" />
+                    </div>
+                    <span className="text-white font-medium text-sm">Available On</span>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {nationalBroadcasts.map((broadcast, index) => (
+                      <Badge 
+                        key={index} 
+                        className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
+                      >
+                        {broadcast.name || broadcast.callLetters}
+                      </Badge>
+                    ))}
+                    {regionalBroadcasts.map((broadcast, index) => (
+                      <Badge 
+                        key={index} 
+                        className="bg-purple-600 text-white border-0 text-xs px-2 py-1 font-medium"
+                      >
+                        {broadcast.name || broadcast.callLetters}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Desktop Layout (unchanged) */}
-        <div className="hidden md:flex flex-col h-full">
+        <div className="hidden lg:flex flex-col h-full">
           {/* Top Header with League Badge and Alert Button */}
           <div className="flex justify-between items-start p-4">
             <div className="flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
