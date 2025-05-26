@@ -20,31 +20,36 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   const [hasAlert, setHasAlert] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing alert when component mounts
+  // Check for existing alert when component mounts with cache busting
   useEffect(() => {
     const checkExistingAlert = async () => {
       try {
-        const response = await fetch(`/api/game-alerts/${game.id}`, {
+        const response = await fetch(`/api/game-alerts/${game.id}?t=${Date.now()}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
           },
           credentials: 'include', // Important for session cookies
         });
         
         if (response.ok) {
           const data = await response.json();
-          if (data.exists) {
-            setHasAlert(true);
-          }
+          console.log('🎯 Alert check result for game', game.id, ':', data);
+          setHasAlert(data.exists || false);
+        } else {
+          console.log('⚠️ Alert check failed:', response.status);
+          setHasAlert(false);
         }
       } catch (error) {
         console.error('Error checking existing alert:', error);
-        // Don't show error to user for this check
+        setHasAlert(false);
       }
     };
 
-    checkExistingAlert();
+    // Small delay to ensure auth is ready
+    const timeoutId = setTimeout(checkExistingAlert, 100);
+    return () => clearTimeout(timeoutId);
   }, [game.id]);
 
   const handleSetAlert = async (minutesBefore: number) => {
@@ -232,61 +237,61 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
 
         {/* Main Content - Team Logos and Info */}
         <div className="flex-1 flex flex-col items-center justify-center px-3 sm:px-6">
-          {/* Team Matchup with Responsive Logos */}
-          <div className="flex items-center justify-center gap-3 sm:gap-12 mb-4 sm:mb-8">
+          {/* Team Matchup with Larger Logos and Better Spacing */}
+          <div className="flex items-center justify-center gap-8 sm:gap-16 mb-8 sm:mb-12">
             {/* Away Team */}
             <div className="text-center">
-              <div className="w-12 h-12 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4 bg-white/10 rounded-full p-1 sm:p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.awayTeam.logo} 
                   alt={game.awayTeam.name}
-                  className="w-10 h-10 sm:w-18 sm:h-18 object-contain"
+                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
-              {/* Show abbreviation on mobile, full name on desktop */}
-              <h3 className="font-bold text-white text-xs sm:text-lg mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-sm font-medium hidden sm:block">{game.awayTeam.name}</p>
+              {/* Show abbreviation prominently */}
+              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
             </div>
             
-            {/* VS Section */}
-            <div className="px-1 sm:px-8">
-              <div className="text-lg sm:text-4xl font-bold text-white/90 tracking-wider">VS</div>
+            {/* VS Section - More Prominent */}
+            <div className="px-2 sm:px-4">
+              <div className="text-2xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
             </div>
             
             {/* Home Team */}
             <div className="text-center">
-              <div className="w-12 h-12 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4 bg-white/10 rounded-full p-1 sm:p-3 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.homeTeam.logo} 
                   alt={game.homeTeam.name}
-                  className="w-10 h-10 sm:w-18 sm:h-18 object-contain"
+                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
-              {/* Show abbreviation on mobile, full name on desktop */}
-              <h3 className="font-bold text-white text-xs sm:text-lg mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-sm font-medium hidden sm:block">{game.homeTeam.name}</p>
+              {/* Show abbreviation prominently */}
+              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
             </div>
           </div>
 
-          {/* Countdown Timer - Always Visible and Responsive */}
-          <div className="text-center mb-4 sm:mb-8">
-            <div className="text-2xl sm:text-5xl font-bold text-white mb-1 sm:mb-2 font-mono tracking-wide">
+          {/* Countdown Timer - More Prominent */}
+          <div className="text-center mb-8 sm:mb-12">
+            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
               {timeRemaining}
             </div>
-            <p className="text-purple-200 text-sm sm:text-lg font-medium">Until Game Time</p>
+            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Details in Responsive Cards */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-8 mb-4 sm:mb-6 w-full max-w-md sm:max-w-none">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 sm:px-4 py-2 w-full sm:w-auto">
+          {/* Game Details in Better Spaced Cards */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 mb-6 sm:mb-8 w-full max-w-lg sm:max-w-none">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto min-w-[140px]">
               <div className="flex items-center justify-center sm:justify-start gap-2 text-white">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 sm:px-4 py-2 w-full sm:w-auto">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto min-w-[180px]">
               <div className="flex items-center justify-center sm:justify-start gap-2 text-white">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
               </div>
             </div>

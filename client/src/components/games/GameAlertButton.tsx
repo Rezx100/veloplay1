@@ -76,7 +76,7 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
     }
   }, [gameDate]);
 
-  // Check if user already has an alert for this game
+  // Check if user already has an alert for this game with proper cache invalidation
   useEffect(() => {
     let isMounted = true;
     
@@ -92,11 +92,12 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       try {
         console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the proper API endpoint with authentication
-        const response = await fetch(`/api/game-alerts/${gameId}`, {
+        // Use the proper API endpoint with authentication and cache busting
+        const response = await fetch(`/api/game-alerts/${gameId}?t=${Date.now()}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
           },
           credentials: 'include',
         });
