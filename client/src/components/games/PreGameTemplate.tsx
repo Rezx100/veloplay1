@@ -59,19 +59,33 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
         notifyMinutesBefore: minutesBefore
       });
 
-      setHasAlert(true);
-      // Toast notification disabled per user request
-      // toast({
-      //   title: 'Game Alert Set',
-      //   description: `You'll be notified ${minutesBefore} minutes before ${game.name} starts`,
-      //   variant: 'default',
-      // });
+      if (result.ok) {
+        setHasAlert(true);
+        toast({
+          title: 'Game Alert Set',
+          description: `You'll be notified ${minutesBefore} minutes before ${game.name} starts`,
+          variant: 'default',
+        });
+      } else {
+        const errorData = await result.json();
+        if (result.status === 409) {
+          // Alert already exists - show informative message
+          setHasAlert(true);
+          toast({
+            title: 'Alert Already Set',
+            description: `You already have an alert set for this game. You'll be notified ${minutesBefore} minutes before ${game.name} starts.`,
+            variant: 'default',
+          });
+        } else {
+          throw new Error(errorData.message || 'Failed to set alert');
+        }
+      }
     } catch (error) {
       console.error('Error setting game alert:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to set game alert. Please try again.',
-        variant: 'destructive',
+        title: 'Unable to Set Alert',
+        description: error instanceof Error ? error.message : 'Please try again later.',
+        variant: 'default',
       });
     }
   };
