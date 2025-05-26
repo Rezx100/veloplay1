@@ -292,35 +292,18 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
             videoRef.current.autoplay = true;
             videoRef.current.preload = 'auto';
             
-            // For mobile, always start muted for better autoplay success
-            if (isMobile) {
-              videoRef.current.muted = true;
-              videoRef.current.setAttribute('muted', 'true');
-            }
-            
             try {
-              // For mobile, try muted autoplay first (higher success rate)
-              if (isMobile) {
-                videoRef.current.muted = true;
-                await videoRef.current.play();
-                console.log('[VideoPlayer] ✅ Mobile muted autoplay successful - tap to unmute');
-                setIsPlaying(true);
-                setIsMuted(true);
-                setIsLoading(false);
-                setIsInitialLoad(false);
-              } else {
-                // Desktop: try direct play first
-                await videoRef.current.play();
-                console.log('[VideoPlayer] ✅ Desktop autoplay successful');
-                setIsPlaying(true);
-                setIsLoading(false);
-                setIsInitialLoad(false);
-              }
+              // First attempt: Try with sound (what user wants)
+              await videoRef.current.play();
+              console.log('[VideoPlayer] ✅ Autoplay with sound successful');
+              setIsPlaying(true);
+              setIsLoading(false);
+              setIsInitialLoad(false);
             } catch (firstError) {
-              console.log('[VideoPlayer] ⚠️ Initial autoplay blocked, trying fallback...');
+              console.log('[VideoPlayer] ⚠️ Autoplay with sound blocked, trying muted...');
               
               try {
-                // Fallback: always try muted autoplay
+                // Fallback: Try muted autoplay
                 videoRef.current.muted = true;
                 videoRef.current.setAttribute('muted', 'true');
                 await videoRef.current.play();
@@ -336,7 +319,7 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
                   // Final try: load first, then play muted
                   videoRef.current.muted = true;
                   videoRef.current.load();
-                  await new Promise(resolve => setTimeout(resolve, 200));
+                  await new Promise(resolve => setTimeout(resolve, 300));
                   await videoRef.current.play();
                   console.log('[VideoPlayer] ✅ Load + muted play successful');
                   setIsPlaying(true);
@@ -344,9 +327,8 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
                   setIsLoading(false);
                   setIsInitialLoad(false);
                 } catch (thirdError) {
-                  console.log('[VideoPlayer] ⚠️ All autoplay attempts failed, showing manual play button');
+                  console.log('[VideoPlayer] ⚠️ All autoplay attempts failed');
                   setIsLoading(false);
-                  // Show manual play button for user interaction
                 }
               }
             }
@@ -560,9 +542,13 @@ function HlsVideoPlayer({ url }: HlsVideoPlayerProps) {
         style={{ objectFit: 'contain' }}
       />
       
-      {/* Minimal Custom video controls */}
+      {/* Minimal Custom video controls - Always visible on mobile with fadeaway */}
       <div 
-        className={`absolute bottom-0 left-0 right-0 bg-black/80 px-4 py-3 transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute bottom-0 left-0 right-0 bg-black/80 px-4 py-3 transition-opacity duration-500 ${
+          showControls || !isPlaying ? 'opacity-100' : 
+          // On mobile (touch devices), show controls longer with slower fade
+          (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ? 'opacity-80' : 'opacity-0'
+        }`}
       >
         {/* Always-full red progress bar */}
         <div className="w-full h-1 bg-gray-600 rounded mb-3">
