@@ -69,11 +69,11 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
       } else {
         const errorData = await result.json();
         if (result.status === 409) {
-          // Alert already exists - show informative message
+          // Alert already exists - show simple message
           setHasAlert(true);
           toast({
             title: 'Alert Already Set',
-            description: `You already have an alert set for this game. You'll be notified ${minutesBefore} minutes before ${game.name} starts.`,
+            description: 'You have an alert already set for this game.',
             variant: 'default',
           });
         } else {

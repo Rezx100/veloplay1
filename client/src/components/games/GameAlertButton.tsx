@@ -176,11 +176,11 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       const success = !error || error.code === '23505' || error.code === 'PGRST409';
       
       if (error && ['23505', 'PGRST409'].includes(error.code)) {
-        // Alert already exists - show informative message
+        // Alert already exists - show simple message
         console.log('Alert already exists for this game');
         toast({
           title: 'Alert Already Set',
-          description: `You already have an alert set for this game. You'll be notified ${notifyMinutesBefore} minutes before ${gameName} starts.`,
+          description: 'You have an alert already set for this game.',
           variant: 'default',
         });
         setIsDialogOpen(false);
