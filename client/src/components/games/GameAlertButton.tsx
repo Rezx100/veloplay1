@@ -111,11 +111,22 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
 
         if (isMounted) {
           if (data && data.length > 0 && !error) {
-            setHasAlert(true);
-            console.log(`🚨 Alert status set to: HAS ALERT`);
+            // Check if the alert has been notified
+            const alertRecord = data[0];
+            const isNotified = alertRecord.is_notified;
+            
+            if (isNotified) {
+              // Alert was already sent, user can create a new one
+              setHasAlert(false);
+              console.log(`🚨 Alert was notified, showing "Set Alert" for new alert`);
+            } else {
+              // Alert exists and not yet notified, show "Alert Set"
+              setHasAlert(true);
+              console.log(`🚨 Active alert found, showing "Alert Set"`);
+            }
           } else {
             setHasAlert(false);
-            console.log(`🚨 Alert status set to: NO ALERT`, error);
+            console.log(`🚨 No alert found, showing "Set Alert"`, error);
           }
         }
       } catch (error) {
@@ -177,11 +188,44 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
 
       console.log('💾 Attempting to save alert to database:', alertData);
 
-      const { data, error } = await supabase
+      // First check if there's an existing alert for this user and game
+      const { data: existingAlert } = await supabase
         .from('game_alerts')
-        .insert(alertData)
-        .select()
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('game_id', gameId)
         .single();
+
+      let data, error;
+
+      if (existingAlert) {
+        // Update existing alert (reset is_notified to false and update timing)
+        console.log('💾 Updating existing alert:', existingAlert.id);
+        const updateResult = await supabase
+          .from('game_alerts')
+          .update({
+            notify_minutes_before: alertData.notify_minutes_before,
+            is_notified: false,
+            created_at: alertData.created_at
+          })
+          .eq('id', existingAlert.id)
+          .select()
+          .single();
+        
+        data = updateResult.data;
+        error = updateResult.error;
+      } else {
+        // Create new alert
+        console.log('💾 Creating new alert');
+        const insertResult = await supabase
+          .from('game_alerts')
+          .insert(alertData)
+          .select()
+          .single();
+        
+        data = insertResult.data;
+        error = insertResult.error;
+      }
 
       console.log('💾 Database save result:', { data, error });
 
