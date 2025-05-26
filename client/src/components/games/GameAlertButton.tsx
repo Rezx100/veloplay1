@@ -90,41 +90,21 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       }
 
       try {
-        console.log('🔍 Checking for existing alert using backend API:', { userId: user.id, gameId });
+        console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
         
-        // Use the backend API to check for existing alerts
-        const response = await fetch('/api/game-alerts', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        });
-
-        console.log('📊 Backend API response status:', response.status);
+        // Use the apiRequest helper for proper authentication
+        const response = await apiRequest('GET', `/api/game-alerts/${gameId}?t=${Date.now()}`);
 
         if (response.ok) {
-          const alerts = await response.json();
-          console.log('📊 All user alerts from backend:', alerts);
+          const result = await response.json();
+          console.log('🎯 Alert check result:', result);
           
-          // Check if there's an active alert for this game
-          const gameAlert = alerts.find((alert: any) => 
-            alert.gameId === gameId && !alert.isNotified
-          );
-          
-          console.log('📊 Alert for this game:', gameAlert);
-
           if (isMounted) {
-            if (gameAlert) {
-              setHasAlert(true);
-              console.log('🚨 Active alert found, showing "Alert Set"');
-            } else {
-              setHasAlert(false);
-              console.log('🚨 No active alert found, showing "Set Alert"');
-            }
+            setHasAlert(result.exists);
+            console.log(`🚨 Alert status set to: ${result.exists ? 'HAS ALERT' : 'NO ALERT'}`);
           }
         } else {
-          console.log('📊 Failed to fetch alerts from backend:', response.status);
+          console.error('❌ Failed to check alert status:', response.status);
           if (isMounted) {
             setHasAlert(false);
           }
@@ -149,98 +129,6 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       clearTimeout(timeoutId);
     };
   }, [gameId, isAuthenticated, user?.id]);
-
-  // Add debugging for useEffect and force alert checking
-  useEffect(() => {
-    console.log('🎯 GameAlertButton useEffect triggered:', { 
-      hasUser: !!user, 
-      userId: user?.id,
-      gameId, 
-      isAuthenticated 
-    });
-    if (user && gameId && isAuthenticated) {
-      console.log('🎯 About to manually trigger alert check');
-      console.log('🎯 Current states:', { hasAlert, isChecking, isLoading });
-      // Force clear any cached state
-      setIsChecking(true);
-      setHasAlert(false);
-      
-      // Immediately call the function to test
-      const testApiCall = async () => {
-        console.log('🔥 TESTING API CALL NOW');
-        try {
-          const response = await fetch('/api/game-alerts', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          console.log('🔥 API Response status:', response.status);
-          if (response.ok) {
-            const data = await response.json();
-            console.log('🔥 API Response data:', data);
-          } else {
-            console.log('🔥 API Response error:', await response.text());
-          }
-        } catch (error) {
-          console.log('🔥 API Call failed:', error);
-        }
-      };
-      
-      testApiCall();
-      
-      // Also trigger the original function manually since checkAlertStatus isn't defined here
-      setTimeout(async () => {
-        console.log('🎯 Running manual alert check...');
-        if (!isMounted) return;
-        
-        try {
-          const response = await fetch('/api/game-alerts', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          console.log('📊 Manual check - Backend API response status:', response.status);
-
-          if (response.ok) {
-            const alerts = await response.json();
-            console.log('📊 Manual check - All user alerts from backend:', alerts);
-            
-            const gameAlert = alerts.find((alert: any) => 
-              alert.gameId === gameId && !alert.isNotified
-            );
-            
-            console.log('📊 Manual check - Alert for this game:', gameAlert);
-
-            if (isMounted) {
-              if (gameAlert) {
-                setHasAlert(true);
-                console.log('🚨 Manual check - Active alert found, showing "Alert Set"');
-              } else {
-                setHasAlert(false);
-                console.log('🚨 Manual check - No active alert found, showing "Set Alert"');
-              }
-              setIsChecking(false);
-            }
-          } else {
-            console.log('📊 Manual check - Failed to fetch alerts from backend:', response.status);
-            if (isMounted) {
-              setHasAlert(false);
-              setIsChecking(false);
-            }
-          }
-        } catch (error) {
-          console.error('❌ Manual check - Error:', error);
-          if (isMounted) {
-            setHasAlert(false);
-            setIsChecking(false);
-          }
-        }
-      }, 500);
-    }
-  }, [user, gameId, isAuthenticated]);
 
   const handleCreateAlert = async () => {
     if (!isAuthenticated) {
@@ -278,61 +166,29 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
         import.meta.env.VITE_SUPABASE_ANON_KEY!
       );
 
-      console.log('💾 Attempting to save alert to database:', alertData);
-
-      // First check if there's an existing alert for this user and game
-      const { data: existingAlert, error: checkError } = await supabase
+      const { data, error } = await supabase
         .from('game_alerts')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('game_id', gameId)
-        .maybeSingle();
-
-      console.log('💾 Existing alert check:', { existingAlert, checkError });
-
-      let data, error;
-
-      if (existingAlert) {
-        // Update existing alert (reset is_notified to false and update timing)
-        console.log('💾 Updating existing alert:', existingAlert.id);
-        const updateResult = await supabase
-          .from('game_alerts')
-          .update({
-            notify_minutes_before: alertData.notify_minutes_before,
-            is_notified: false,
-            created_at: alertData.created_at
-          })
-          .eq('id', existingAlert.id)
-          .select()
-          .single();
-        
-        data = updateResult.data;
-        error = updateResult.error;
-      } else {
-        // Create new alert
-        console.log('💾 Creating new alert');
-        const insertResult = await supabase
-          .from('game_alerts')
-          .insert(alertData)
-          .select()
-          .single();
-        
-        data = insertResult.data;
-        error = insertResult.error;
-      }
-
-      console.log('💾 Database save result:', { data, error });
+        .insert(alertData)
+        .select()
+        .single();
 
       // Handle both success and "already exists" cases
       const success = !error || error.code === '23505' || error.code === 'PGRST409';
       
-      if (error && !['23505', 'PGRST409'].includes(error.code)) {
-        console.error('❌ Unexpected Supabase error:', error);
+      if (error && ['23505', 'PGRST409'].includes(error.code)) {
+        // Alert already exists - show informative message
+        console.log('Alert already exists for this game');
+        toast({
+          title: 'Alert Already Set',
+          description: `You already have an alert set for this game. You'll be notified ${notifyMinutesBefore} minutes before ${gameName} starts.`,
+          variant: 'default',
+        });
+        setIsDialogOpen(false);
+      } else if (error) {
+        console.error('Unexpected Supabase error:', error);
         throw error;
-      }
-        
-      if (success) {
-        // Alert created or already exists - keep UI state as "alert set"
+      } else {
+        // Alert created successfully
         console.log('Alert successfully saved to database');
         toast({
           title: 'Game Alert Set',
@@ -340,17 +196,6 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
           variant: 'default',
         });
         setIsDialogOpen(false);
-      } else {
-        // Handle error
-        console.error('Supabase error setting alert:', error);
-        
-        // Only show error if there's a real problem, and revert the UI
-        setHasAlert(false);
-        toast({
-          title: 'Error Setting Alert',
-          description: 'Database error when setting game alert. Please try again.',
-          variant: 'destructive',
-        });
       }
       
     } catch (error) {
