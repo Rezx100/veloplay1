@@ -49,41 +49,15 @@ export default function LoginPage() {
   const verification = params.get('verification');
 
   useEffect(() => {
-    // Handle verification success
-    if (verified) {
-      toast({
-        title: '✨ Email Verified!',
-        description: 'Your email has been successfully verified. You can now log in.',
-        variant: 'default',
-      });
+    // Clean up URL parameters without showing notifications
+    if (verified || error || verification) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('verified');
+      url.searchParams.delete('error');
+      url.searchParams.delete('verification');
+      window.history.replaceState({}, '', url.toString());
     }
-    
-    // Handle verification requirement
-    if (verification === 'required') {
-      toast({
-        title: '📧 Email Verification Required',
-        description: 'Please check your email and click the verification link before logging in.',
-        variant: 'destructive',
-      });
-    }
-    
-    // Handle verification errors
-    if (error) {
-      let errorMessage = 'An error occurred during verification.';
-      
-      if (error === 'verification_failed') {
-        errorMessage = 'Email verification failed. The link may have expired.';
-      } else if (error === 'missing_code') {
-        errorMessage = 'Invalid verification link. Please try again.';
-      }
-      
-      toast({
-        title: 'Verification Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    }
-  }, [verified, error, verification, toast]);
+  }, [verified, error, verification]);
 
   // Get login form handlers
   const {
@@ -94,19 +68,9 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Success animation sequence
+  // Success animation sequence - simplified without popup
   const showSuccessAnimation = async () => {
-    setShowSuccess(true);
-    
-    // Wait for success animation
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsRedirecting(true);
-    
-    // Wait for redirect animation
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Navigate to appropriate page
+    // Navigate immediately without popup animations
     const redirectPath = localStorage.getItem('redirect_after_login') || '/';
     localStorage.removeItem('redirect_after_login');
     setLocation(redirectPath);
@@ -185,11 +149,7 @@ export default function LoginPage() {
             // User failed our database verification check
             await supabase.auth.signOut();
             
-            toast({
-              title: '📧 Email Verification Required',
-              description: 'Please verify your email address before accessing the platform.',
-              variant: 'destructive',
-            });
+            // Email verification required - no popup
             
             setIsLoading(false);
             return;
@@ -198,37 +158,23 @@ export default function LoginPage() {
           // If verification check fails, sign out and show error
           await supabase.auth.signOut();
           
-          toast({
-            title: 'Verification Failed',
-            description: 'Unable to verify your account. Please try again.',
-            variant: 'destructive',
-          });
+          // Verification failed - no popup
           
           setIsLoading(false);
           return;
         }
         
-        // Success! Show animation and redirect
+        // Success! Redirect immediately without popup
         setIsLoading(false);
         
-        toast({
-          title: '🎉 Welcome back!',
-          description: 'You have successfully logged in to VeloPlay.',
-          variant: 'default',
-        });
-        
-        // Start success animation sequence
+        // Start success animation sequence (now just redirects)
         await showSuccessAnimation();
       } else {
         throw new Error('No user data received');
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      toast({
-        title: 'Sign in failed',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
-      });
+      // No popup notification for errors
       setIsLoading(false);
     }
   };
