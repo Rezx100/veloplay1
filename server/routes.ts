@@ -459,7 +459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializeSubscriptionPlans();
   
   // Setup stream sources table
-  app.get('/api/setup-stream-sources', authMiddleware, requireAdmin, async (req, res) => {
+  app.get('/api/setup-stream-sources', authMiddleware, async (req, res) => {
     try {
       const { setupStreamSourcesTable } = require('./routes/db-setup');
       const result = await setupStreamSourcesTable();
@@ -903,7 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+  app.get('/api/auth/user', authMiddleware, async (req, res) => {
     try {
       // User is already attached to req by the isAuthenticated middleware
       const user = req.user;
