@@ -175,17 +175,21 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
         import.meta.env.VITE_SUPABASE_ANON_KEY!
       );
 
+      console.log('💾 Attempting to save alert to database:', alertData);
+
       const { data, error } = await supabase
         .from('game_alerts')
         .insert(alertData)
         .select()
         .single();
 
+      console.log('💾 Database save result:', { data, error });
+
       // Handle both success and "already exists" cases
       const success = !error || error.code === '23505' || error.code === 'PGRST409';
       
       if (error && !['23505', 'PGRST409'].includes(error.code)) {
-        console.error('Unexpected Supabase error:', error);
+        console.error('❌ Unexpected Supabase error:', error);
         throw error;
       }
         
