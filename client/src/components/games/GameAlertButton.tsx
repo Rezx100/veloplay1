@@ -90,54 +90,43 @@ export default function GameAlertButton({ gameId, gameName, gameDate }: GameAler
       }
 
       try {
-        console.log('🔍 Checking for existing alert:', { userId: user.id, gameId });
+        console.log('🔍 Checking for existing alert using backend API:', { userId: user.id, gameId });
         
-        // Check directly with Supabase since backend auth isn't working properly
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-          import.meta.env.VITE_SUPABASE_URL!,
-          import.meta.env.VITE_SUPABASE_ANON_KEY!
-        );
+        // Use the backend API to check for existing alerts
+        const response = await fetch('/api/game-alerts', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
 
-        console.log('🔍 Querying Supabase directly for alert:', { userId: user.id, gameId });
-        console.log('🔍 User object:', user);
-        console.log('🔍 User ID type:', typeof user.id, 'Value:', user.id);
+        console.log('📊 Backend API response status:', response.status);
 
-        // First, let's see what's actually in the database for this game
-        const { data: allAlertsForGame, error: allError } = await supabase
-          .from('game_alerts')
-          .select('*')
-          .eq('game_id', gameId);
+        if (response.ok) {
+          const alerts = await response.json();
+          console.log('📊 All user alerts from backend:', alerts);
+          
+          // Check if there's an active alert for this game
+          const gameAlert = alerts.find((alert: any) => 
+            alert.gameId === gameId && !alert.isNotified
+          );
+          
+          console.log('📊 Alert for this game:', gameAlert);
 
-        console.log('📊 All alerts for game', gameId, ':', allAlertsForGame, 'Error:', allError);
-
-        const { data, error } = await supabase
-          .from('game_alerts')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('game_id', gameId);
-
-        console.log('📊 Supabase query result:', { data, error });
-        console.log('📊 Query parameters:', { userId: user.id, gameId });
-
-        if (isMounted) {
-          if (data && data.length > 0 && !error) {
-            // Check if the alert has been notified
-            const alertRecord = data[0];
-            const isNotified = alertRecord.is_notified;
-            
-            if (isNotified) {
-              // Alert was already sent, user can create a new one
-              setHasAlert(false);
-              console.log(`🚨 Alert was notified, showing "Set Alert" for new alert`);
-            } else {
-              // Alert exists and not yet notified, show "Alert Set"
+          if (isMounted) {
+            if (gameAlert) {
               setHasAlert(true);
-              console.log(`🚨 Active alert found, showing "Alert Set"`);
+              console.log('🚨 Active alert found, showing "Alert Set"');
+            } else {
+              setHasAlert(false);
+              console.log('🚨 No active alert found, showing "Set Alert"');
             }
-          } else {
+          }
+        } else {
+          console.log('📊 Failed to fetch alerts from backend:', response.status);
+          if (isMounted) {
             setHasAlert(false);
-            console.log(`🚨 No alert found, showing "Set Alert"`, error);
           }
         }
       } catch (error) {
