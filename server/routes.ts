@@ -1,7 +1,8 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { isAuthenticated, supabaseClient } from "./supabaseAuth"; // Use Supabase for auth
+import { storage } from "./neonStorage";
+import { authMiddleware, requireVerified, generateToken, hashPassword, verifyPassword } from "./auth";
+import { authRoutes } from "./authRoutes";
 import { isAdmin } from "./adminMiddleware"; // Admin middleware
 import { trackUserActivity, getActiveUsers, startCleanupInterval } from "./activeUsers";
 import { 
