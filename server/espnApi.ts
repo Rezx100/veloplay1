@@ -2,6 +2,7 @@ import { Game } from "@shared/schema";
 import fetch from "node-fetch";
 import { format } from "date-fns";
 import { supabase } from "./db";
+import { RedisCache } from "./redis";
 
 const ESPN_API_BASE = "https://site.api.espn.com/apis/v2/scoreboard/header";
 
@@ -322,6 +323,14 @@ export async function getAllGames(date?: Date, includeTomorrow: boolean = false)
     // Always use a date parameter - default to today if not provided
     const dateToUse = date || new Date();
     const formattedDate = formatDateForESPN(dateToUse);
+    const cacheKey = `all-games:${formattedDate}:${includeTomorrow}`;
+    
+    // Try to get from Redis cache first
+    const cachedGames = await RedisCache.get(cacheKey);
+    if (cachedGames) {
+      console.log(`⚡ Retrieved ${cachedGames.length} games from Redis cache for ${formattedDate}`);
+      return cachedGames;
+    }
     
     console.log(`Fetching games for date: ${dateToUse.toISOString()}`);
     
@@ -394,6 +403,10 @@ export async function getAllGames(date?: Date, includeTomorrow: boolean = false)
     }
     
     console.log(`🟢 FINAL: Total games loaded: ${allGames.length}`);
+    
+    // Cache the results for 2 minutes (games data changes frequently during live games)
+    await RedisCache.set(cacheKey, allGames, 120);
+    console.log(`💾 Cached ${allGames.length} games for ${formattedDate}`);
     
     return allGames;
   } catch (error) {
