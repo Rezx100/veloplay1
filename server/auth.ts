@@ -77,10 +77,10 @@ export async function authMiddleware(req: Request & { user?: AuthUser }, res: Re
 
     req.user = {
       id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      isVerified: user.isEmailVerified,
-      isAdmin: user.isAdmin
+      email: user.email || '',
+      fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      isVerified: user.isVerified || false,
+      isAdmin: user.isAdmin || false
     };
 
     next();
