@@ -235,64 +235,62 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
           </div>
         </div>
 
-        {/* Main Content - Team Logos and Info */}
-        <div className="flex-1 flex flex-col items-center justify-center px-2 sm:px-6 py-2 sm:py-0">
-          {/* Team Matchup with Larger Logos and Better Spacing */}
-          <div className="flex items-center justify-center gap-4 sm:gap-16 mb-4 sm:mb-12">
+        {/* Main Content - Mobile Optimized Layout */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-3 sm:py-0">
+          {/* Team Matchup - Compact Mobile Design */}
+          <div className="flex items-center justify-between w-full max-w-sm sm:max-w-none sm:gap-16 mb-6 sm:mb-12">
             {/* Away Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 sm:w-32 sm:h-32 mx-auto mb-2 sm:mb-6 bg-white/10 rounded-full p-1.5 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+            <div className="text-center flex-1">
+              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.awayTeam.logo} 
                   alt={game.awayTeam.name}
-                  className="w-12 h-12 sm:w-24 sm:h-24 object-contain"
+                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
-              {/* Show abbreviation prominently */}
-              <h3 className="font-bold text-white text-base sm:text-2xl mb-0.5 sm:mb-1">{game.awayTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-base font-medium">{game.awayTeam.name}</p>
+              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.awayTeam.abbreviation}</h3>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.awayTeam.name}</p>
             </div>
             
-            {/* VS Section - More Prominent */}
-            <div className="px-1 sm:px-4">
-              <div className="text-xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
+            {/* VS Section - Centered */}
+            <div className="px-3 sm:px-4 flex-shrink-0">
+              <div className="text-2xl sm:text-5xl font-bold text-white/90 tracking-wider">VS</div>
             </div>
             
             {/* Home Team */}
-            <div className="text-center">
-              <div className="w-16 h-16 sm:w-32 sm:h-32 mx-auto mb-2 sm:mb-6 bg-white/10 rounded-full p-1.5 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
+            <div className="text-center flex-1">
+              <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-3 sm:mb-6 bg-white/10 rounded-full p-2 sm:p-4 flex items-center justify-center backdrop-blur-sm border border-white/20">
                 <img 
                   src={game.homeTeam.logo} 
                   alt={game.homeTeam.name}
-                  className="w-12 h-12 sm:w-24 sm:h-24 object-contain"
+                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                 />
               </div>
-              {/* Show abbreviation prominently */}
-              <h3 className="font-bold text-white text-base sm:text-2xl mb-0.5 sm:mb-1">{game.homeTeam.abbreviation}</h3>
-              <p className="text-purple-200 text-xs sm:text-base font-medium">{game.homeTeam.name}</p>
+              <h3 className="font-bold text-white text-lg sm:text-2xl mb-1">{game.homeTeam.abbreviation}</h3>
+              <p className="text-purple-200 text-sm sm:text-base font-medium">{game.homeTeam.name}</p>
             </div>
           </div>
 
-          {/* Countdown Timer - More Prominent */}
-          <div className="text-center mb-3 sm:mb-12">
-            <div className="text-2xl sm:text-6xl font-bold text-white mb-1 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
+          {/* Countdown Timer - Prominent */}
+          <div className="text-center mb-6 sm:mb-12">
+            <div className="text-4xl sm:text-6xl font-bold text-white mb-2 sm:mb-3 font-mono tracking-wide drop-shadow-lg">
               {timeRemaining}
             </div>
-            <p className="text-purple-200 text-xs sm:text-xl font-medium">Until Game Time</p>
+            <p className="text-purple-200 text-base sm:text-xl font-medium">Until Game Time</p>
           </div>
 
-          {/* Game Details - Centered Cards */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-8 mb-2 sm:mb-8 w-full">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 sm:px-6 py-2 sm:py-3 min-w-[120px] sm:min-w-[140px]">
+          {/* Game Details - Stacked on Mobile */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 mb-4 sm:mb-8 w-full max-w-md sm:max-w-none">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto sm:min-w-[140px]">
               <div className="flex items-center justify-center gap-2 text-white">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="font-medium text-xs sm:text-base">{formatGameTime()}</span>
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium text-sm sm:text-base">{formatGameTime()}</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 sm:px-6 py-2 sm:py-3 min-w-[140px] sm:min-w-[180px]">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 sm:px-6 py-3 w-full sm:w-auto sm:min-w-[180px]">
               <div className="flex items-center justify-center gap-2 text-white">
-                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="font-medium text-xs sm:text-base truncate">{game.venue.name}</span>
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium text-sm sm:text-base truncate">{game.venue.name}</span>
               </div>
             </div>
           </div>
