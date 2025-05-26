@@ -26,6 +26,8 @@ export default function SimpleGameAlertButton({ gameId, gameName, className = ""
 
     try {
       console.log('🔍 SimpleGameAlertButton: Checking alert for game', gameId);
+      console.log('🔍 SimpleGameAlertButton: User ID:', user.id);
+      console.log('🔍 SimpleGameAlertButton: Game ID:', gameId);
       
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
