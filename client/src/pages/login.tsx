@@ -47,17 +47,28 @@ export default function LoginPage() {
   const verified = params.get('verified') === 'true';
   const error = params.get('error');
   const verification = params.get('verification');
+  const emailParam = params.get('email');
 
   useEffect(() => {
+    // Show verification success message if coming from email verification
+    if (verified && emailParam) {
+      toast({
+        title: '✅ Email Verified Successfully!',
+        description: 'Your email has been verified. Please sign in to continue.',
+        duration: 5000,
+      });
+    }
+    
     // Clean up URL parameters without showing notifications
-    if (verified || error || verification) {
+    if (verified || error || verification || emailParam) {
       const url = new URL(window.location.href);
       url.searchParams.delete('verified');
       url.searchParams.delete('error');
       url.searchParams.delete('verification');
+      url.searchParams.delete('email');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [verified, error, verification]);
+  }, [verified, error, verification, emailParam, toast]);
 
   // Get login form handlers
   const {

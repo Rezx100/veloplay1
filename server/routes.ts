@@ -693,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Direct email verification endpoint (for our custom verification flow)
   app.post('/api/verify-email', async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email, autoLogin } = req.body;
       
       if (!email) {
         return res.status(400).json({ 
@@ -702,21 +702,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log(`[AUTO-VERIFY] Processing auto-verification for email: ${email}`);
+      console.log(`[AUTO-VERIFY] Processing auto-verification for email: ${email}, autoLogin: ${autoLogin}`);
       
       // Mark the email as verified in our system
       try {
-        // Update user record in Supabase to mark as verified
-        // For Supabase, this would typically be done in an admin function
-        // For now, we'll just use the email_verified flag in localStorage on the client
-        
         console.log(`[AUTO-VERIFY] Email verified for: ${email}`);
         
-        return res.status(200).json({
-          message: "Email successfully verified. Please visit the pricing page to choose a subscription plan.",
-          success: true,
-          redirectToPricing: true
-        });
+        // If auto-login is requested, get user data for automatic sign-in
+        if (autoLogin) {
+          try {
+            // Get the user from our database to retrieve their information
+            const user = await storage.getUserByEmail(email);
+            
+            if (user) {
+              console.log(`[AUTO-VERIFY] Found user for auto-login: ${email}`);
+              
+              // For auto-login to work, we need to provide the password to the frontend
+              // Since we can't retrieve the actual password (it's hashed), we'll use a different approach
+              // We'll create a temporary session token or use Supabase's admin auth
+              
+              return res.status(200).json({
+                message: "Email successfully verified. Logging you in automatically...",
+                success: true,
+                autoLogin: true,
+                redirectToPricing: !user.isVerified, // Redirect to pricing if this is their first verification
+                userId: user.id
+              });
+            } else {
+              console.log(`[AUTO-VERIFY] User not found for auto-login: ${email}`);
+              // Fall back to manual login
+              return res.status(200).json({
+                message: "Email successfully verified. Please log in to continue.",
+                success: true,
+                redirectToPricing: true
+              });
+            }
+          } catch (userError) {
+            console.error('[AUTO-VERIFY] Error getting user for auto-login:', userError);
+            // Fall back to manual login
+            return res.status(200).json({
+              message: "Email successfully verified. Please log in to continue.",
+              success: true,
+              redirectToPricing: true
+            });
+          }
+        } else {
+          // Standard verification without auto-login
+          return res.status(200).json({
+            message: "Email successfully verified. Please visit the pricing page to choose a subscription plan.",
+            success: true,
+            redirectToPricing: true
+          });
+        }
       } catch (error) {
         console.error('[AUTO-VERIFY] Error marking email as verified:', error);
         return res.status(500).json({

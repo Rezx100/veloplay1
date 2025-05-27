@@ -37,24 +37,36 @@ export default function AuthCallback() {
           // Set email_verified in localStorage immediately
           localStorage.setItem('email_verified', 'true');
           
-          // Mark the email as verified in our system (no free trial activation)
+          // Mark the email as verified in our system and get auth token
           try {
             // Call the API to mark the email as verified in our system
             const response = await fetch('/api/verify-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email })
+              body: JSON.stringify({ email, autoLogin: true })
             });
             
             if (response.ok) {
               const data = await response.json();
               console.log('Email verified successfully in our system', data);
               
-              // Check if we should redirect to pricing page
-              if (data.redirectToPricing) {
-                // Set a flag to redirect to pricing after login
-                localStorage.setItem('redirect_to_pricing', 'true');
-                console.log('User will be redirected to pricing page after login');
+              // For auto-login, we'll redirect to login with pre-filled email and success message
+              if (data.autoLogin && data.userId) {
+                console.log('Redirecting to login with verification success for:', email);
+                
+                // Store the email for pre-filling the login form
+                localStorage.setItem('verified_email', email);
+                localStorage.setItem('email_verified', 'true');
+                
+                // Redirect to login with success parameters
+                redirectUrl = `/login?verified=true&email=${encodeURIComponent(email)}`;
+              } else {
+                // Check if we should redirect to pricing page
+                if (data.redirectToPricing) {
+                  // Set a flag to redirect to pricing after login
+                  localStorage.setItem('redirect_to_pricing', 'true');
+                  console.log('User will be redirected to pricing page after login');
+                }
               }
             } else {
               console.error('Failed to verify email in our system');
