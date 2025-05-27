@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Helmet } from 'react-helmet';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,6 +19,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import VerificationMessage from '@/components/auth/VerificationMessage';
 import { supabaseClient } from '../lib/supabase';
+import { 
+  CheckCircle2, 
+  UserPlus, 
+  RefreshCw, 
+  Mail, 
+  AlertCircle,
+  Sparkles,
+  User,
+  KeyRound
+} from 'lucide-react';
 
 // Schema for the signup form
 const signupSchema = z.object({
@@ -37,6 +48,8 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   const {
     register,
@@ -184,11 +197,13 @@ export default function SignupPage() {
         console.error("Error clearing session data after signup:", clearError);
       }
       
-      toast({
-        title: 'Account created',
-        description: 'Please check your inbox for the verification email. You should receive one or more emails with verification links. Check your spam folder if nothing appears within a few minutes.',
-      });
-      setVerificationEmail(data.email);
+      // Show success animation first
+      setShowSuccess(true);
+      
+      // After a brief moment, show the verification screen
+      setTimeout(() => {
+        setVerificationEmail(data.email);
+      }, 2000);
       
     } catch (error) {
       console.error('Sign up error:', error);
@@ -259,88 +274,239 @@ export default function SignupPage() {
     <>
       <Helmet>
         <title>Sign Up - VeloPlay</title>
-        <meta name="description" content="Create your VeloPlay account and start streaming your favorite sports." />
+        <meta name="description" content="Create your VeloPlay account and start streaming your favorite sports content including NFL, NBA, NHL, and MLB games." />
       </Helmet>
       
-      <div className="container flex items-center justify-center min-h-[80vh] py-8">
-        <Card className="w-full max-w-md bg-[#1a1a1a] border-[#333333]">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-            <CardDescription>
-              Enter your details to create your VeloPlay account
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First name</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    {...register('firstName')}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-red-500">{errors.firstName.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last name (optional)</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    {...register('lastName')}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-red-500">{errors.lastName.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john.doe@example.com"
-                  {...register('email')}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email.message}</p>
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col justify-center px-6 py-12 bg-[#0d021f]">
+        <div className="flex flex-col sm:mx-auto sm:w-full sm:max-w-md space-y-6">
+          {/* Header */}
+          <motion.div 
+            className="text-center"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-3xl font-bold text-white">
+              Join VeloPlay
+            </h1>
+            <p className="text-[#a68dff] mt-2">
+              Create your account and start streaming
+            </p>
+          </motion.div>
+          
+          {/* Signup Card */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Card className="bg-[#1a1a1a] border-[#333333] overflow-hidden">
+              <AnimatePresence mode="wait">
+                {showSuccess ? (
+                  <motion.div
+                    key="success"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 1.1, opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="p-8 text-center"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="mb-4"
+                    >
+                      <div className="mx-auto w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-8 h-8 text-white" />
+                      </div>
+                    </motion.div>
+                    
+                    <motion.h3
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-xl font-semibold text-white mb-2"
+                    >
+                      Account Created!
+                    </motion.h3>
+                    
+                    <motion.p
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-[#a68dff] mb-4"
+                    >
+                      Please check your email to verify your account
+                    </motion.p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="signup-form"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-xl text-white flex items-center">
+                        <UserPlus className="mr-2 h-5 w-5 text-[#7f00ff]" />
+                        Create Account
+                      </CardTitle>
+                      <CardDescription className="text-[#a68dff]">
+                        Enter your details to join VeloPlay
+                      </CardDescription>
+                    </CardHeader>
+                    
+                    <CardContent>
+                      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="firstName" className="text-white">First name</Label>
+                            <div className="relative">
+                              <User className="absolute left-3 top-3 h-4 w-4 text-[#a68dff]" />
+                              <Input
+                                id="firstName"
+                                placeholder="John"
+                                autoComplete="given-name"
+                                {...register('firstName')}
+                                className="pl-10 bg-[#1c1c1c] border-[#444444] text-white placeholder:text-[#666666] focus:border-[#7f00ff] focus:ring-[#7f00ff]"
+                              />
+                            </div>
+                            {errors.firstName && (
+                              <motion.p 
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-sm text-red-400 flex items-center"
+                              >
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                {errors.firstName.message}
+                              </motion.p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName" className="text-white">Last name</Label>
+                            <div className="relative">
+                              <User className="absolute left-3 top-3 h-4 w-4 text-[#a68dff]" />
+                              <Input
+                                id="lastName"
+                                placeholder="Doe (optional)"
+                                autoComplete="family-name"
+                                {...register('lastName')}
+                                className="pl-10 bg-[#1c1c1c] border-[#444444] text-white placeholder:text-[#666666] focus:border-[#7f00ff] focus:ring-[#7f00ff]"
+                              />
+                            </div>
+                            {errors.lastName && (
+                              <motion.p 
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-sm text-red-400 flex items-center"
+                              >
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                {errors.lastName.message}
+                              </motion.p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-white">Email</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 h-4 w-4 text-[#a68dff]" />
+                            <Input
+                              id="email"
+                              placeholder="Enter your email address"
+                              type="email"
+                              autoCapitalize="none"
+                              autoComplete="email"
+                              autoCorrect="off"
+                              {...register('email')}
+                              className="pl-10 bg-[#1c1c1c] border-[#444444] text-white placeholder:text-[#666666] focus:border-[#7f00ff] focus:ring-[#7f00ff]"
+                            />
+                          </div>
+                          {errors.email && (
+                            <motion.p 
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-sm text-red-400 flex items-center"
+                            >
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              {errors.email.message}
+                            </motion.p>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="password" className="text-white">Password</Label>
+                          <div className="relative">
+                            <KeyRound className="absolute left-3 top-3 h-4 w-4 text-[#a68dff]" />
+                            <Input
+                              id="password"
+                              placeholder="Create a secure password"
+                              type="password"
+                              autoComplete="new-password"
+                              {...register('password')}
+                              className="pl-10 bg-[#1c1c1c] border-[#444444] text-white placeholder:text-[#666666] focus:border-[#7f00ff] focus:ring-[#7f00ff]"
+                            />
+                          </div>
+                          {errors.password && (
+                            <motion.p 
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-sm text-red-400 flex items-center"
+                            >
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              {errors.password.message}
+                            </motion.p>
+                          )}
+                        </div>
+                        
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-[#7f00ff] to-[#a855f7] hover:from-[#6b00d6] hover:to-[#9333ea] text-white border-0 transition-all duration-300 transform hover:scale-[1.02]" 
+                          disabled={isLoading}
+                          size="lg"
+                        >
+                          {isLoading ? (
+                            <>
+                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                              Creating account...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Create Account
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    </CardContent>
+                    
+                    <CardFooter className="flex flex-col space-y-4">
+                      <div className="text-center text-sm text-[#a68dff]">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-[#7f00ff] hover:text-[#a855f7] font-medium transition-colors">
+                          Sign in here
+                        </Link>
+                      </div>
+                      
+                      <div className="text-center text-xs text-[#666666]">
+                        By creating an account, you agree to our{' '}
+                        <Link href="/legal/terms-of-service" className="text-[#7f00ff] hover:underline">
+                          Terms of Service
+                        </Link>{' '}
+                        and{' '}
+                        <Link href="/legal/privacy-policy" className="text-[#7f00ff] hover:underline">
+                          Privacy Policy
+                        </Link>
+                      </div>
+                    </CardFooter>
+                  </motion.div>
                 )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  {...register('password')}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password.message}</p>
-                )}
-              </div>
-            </CardContent>
-            
-            <CardFooter className="flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full bg-purple-700 hover:bg-purple-800"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating account...' : 'Sign Up'}
-              </Button>
-              
-              <div className="text-center text-sm">
-                Already have an account?{' '}
-                <Link href="/login">
-                  <a className="text-purple-400 hover:underline">Sign in</a>
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
+              </AnimatePresence>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </>
   );
