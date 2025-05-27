@@ -220,6 +220,18 @@ export default function Dashboard() {
 
           {/* Account Management & Info */}
           <div className="space-y-6">
+            {/* Achievement Badge */}
+            <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
+              <CardContent className="p-6 text-center">
+                <Trophy className="h-8 w-8 text-amber-400 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-1">Fan Level</h3>
+                <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">
+                  {achievementLevel}
+                </Badge>
+                <p className="text-purple-300 text-sm mt-2">Keep watching to level up!</p>
+              </CardContent>
+            </Card>
+
             {/* Subscription Status */}
             <Card className="bg-gradient-to-br from-[#7f00ff]/10 to-[#9d4edd]/10 border-[#7f00ff]/20">
               <CardContent className="p-6">
@@ -324,18 +336,6 @@ export default function Dashboard() {
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Account
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Achievement Badge */}
-            <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
-              <CardContent className="p-6 text-center">
-                <Trophy className="h-8 w-8 text-amber-400 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-white mb-1">Fan Level</h3>
-                <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">
-                  {achievementLevel}
-                </Badge>
-                <p className="text-purple-300 text-sm mt-2">Keep watching to level up!</p>
               </CardContent>
             </Card>
 
