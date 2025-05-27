@@ -121,6 +121,9 @@ export default function Pricing() {
               <div className="text-center">
                 <div className="text-2xl font-bold">$0</div>
                 <div className="text-sm text-gray-400">for 15 days</div>
+                <div className="text-xs text-green-400 mt-2 font-medium">
+                  ✓ No credit card required
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
