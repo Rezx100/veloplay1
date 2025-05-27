@@ -75,8 +75,8 @@ export default function Pricing() {
           </p>
         </div>
 
-        {/* Current Status Card */}
-        {user && (
+        {/* Current Status Card - Only show for authenticated users with profile data */}
+        {user && userProfile && !isLoading && (
           <div className="mb-8">
             <Card className="bg-gray-800/50 border-gray-700">
               <CardHeader>
@@ -91,24 +91,22 @@ export default function Pricing() {
                 </div>
               </CardHeader>
               <CardContent>
-                {userProfile && (
-                  <div className="space-y-2">
-                    <p className="text-gray-300">
-                      Account created: {formatDate(userProfile.createdAt)}
+                <div className="space-y-2">
+                  <p className="text-gray-300">
+                    Account created: {formatDate(userProfile.createdAt)}
+                  </p>
+                  {userProfile.isAdmin ? (
+                    <p className="text-green-400">✅ You have admin privileges with unlimited access</p>
+                  ) : userProfile.isTrialActive ? (
+                    <p className="text-blue-400">
+                      🎉 Your free trial expires on {formatDate(userProfile.trialExpiresAt)}
                     </p>
-                    {userProfile.isAdmin ? (
-                      <p className="text-green-400">✅ You have admin privileges with unlimited access</p>
-                    ) : userProfile.isTrialActive ? (
-                      <p className="text-blue-400">
-                        🎉 Your free trial expires on {formatDate(userProfile.trialExpiresAt)}
-                      </p>
-                    ) : (
-                      <p className="text-orange-400">
-                        ⏰ Your trial ended on {formatDate(userProfile.trialExpiresAt)}
-                      </p>
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-orange-400">
+                      ⏰ Your trial ended on {formatDate(userProfile.trialExpiresAt)}
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
