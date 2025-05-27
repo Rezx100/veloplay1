@@ -143,15 +143,24 @@ export default function Pricing() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">Multiple Devices</span>
+                  <span className="text-sm">Stream on 1 device</span>
                 </div>
               </div>
-              <Button 
-                className="w-full bg-gray-600 hover:bg-gray-500" 
-                disabled
-              >
-                Current Plan
-              </Button>
+              {user ? (
+                <Button 
+                  className="w-full bg-gray-600 hover:bg-gray-500" 
+                  disabled
+                >
+                  Current Plan
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => window.location.href = '/signup'}
+                >
+                  Select Plan
+                </Button>
+              )}
             </CardContent>
           </Card>
 
