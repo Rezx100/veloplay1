@@ -167,6 +167,37 @@ export type StreamSource = typeof streamSources.$inferSelect;
 export type InsertNetworkChannel = typeof networkChannels.$inferInsert;
 export type NetworkChannel = typeof networkChannels.$inferSelect;
 
+// User watch history table
+export const userWatchHistory = pgTable("user_watch_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  gameId: varchar("game_id").notNull(),
+  gameName: varchar("game_name").notNull(),
+  watchStartTime: timestamp("watch_start_time").defaultNow(),
+  watchEndTime: timestamp("watch_end_time"),
+  durationMinutes: integer("duration_minutes").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User transaction history table
+export const userTransactions = pgTable("user_transactions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: integer("subscription_id").references(() => subscriptions.id),
+  amount: integer("amount").notNull(), // Amount in cents
+  description: varchar("description").notNull(),
+  transactionDate: timestamp("transaction_date").defaultNow(),
+  paymentMethod: varchar("payment_method").default("card"),
+  status: varchar("status").default("completed"), // completed, pending, failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type InsertUserWatchHistory = typeof userWatchHistory.$inferInsert;
+export type UserWatchHistory = typeof userWatchHistory.$inferSelect;
+
+export type InsertUserTransaction = typeof userTransactions.$inferInsert;
+export type UserTransaction = typeof userTransactions.$inferSelect;
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users);
 export const insertStreamSchema = createInsertSchema(streams);
@@ -176,6 +207,8 @@ export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans
 export const insertOtpSchema = createInsertSchema(otpCodes);
 export const insertGameAlertSchema = createInsertSchema(gameAlerts);
 export const insertNetworkChannelSchema = createInsertSchema(networkChannels);
+export const insertUserWatchHistorySchema = createInsertSchema(userWatchHistory);
+export const insertUserTransactionSchema = createInsertSchema(userTransactions);
 
 // Broadcast information from ESPN API
 export interface Broadcast {
