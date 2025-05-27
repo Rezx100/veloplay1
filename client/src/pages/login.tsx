@@ -75,9 +75,26 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: emailParam || localStorage.getItem('verified_email') || '',
+      password: ''
+    }
   });
+
+  // Set email from URL parameter or localStorage on component mount
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('verified_email');
+    if (emailParam) {
+      setValue('email', emailParam);
+      localStorage.removeItem('verified_email'); // Clean up
+    } else if (storedEmail) {
+      setValue('email', storedEmail);
+      localStorage.removeItem('verified_email'); // Clean up
+    }
+  }, [emailParam, setValue]);
 
   // Success animation sequence - simplified without popup
   const showSuccessAnimation = async () => {
