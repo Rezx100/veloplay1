@@ -27,6 +27,11 @@ export default function AuthCallback() {
         // Always redirect to login page after verification
         let redirectUrl = '/login?verified=true';
         
+        // If we have an email, add it to the redirect URL for pre-filling
+        if (email) {
+          redirectUrl = `/login?verified=true&email=${encodeURIComponent(email)}`;
+        }
+        
         // Clear any saved game URLs
         localStorage.removeItem('gameUrlBeforeVerification');
         
