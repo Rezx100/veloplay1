@@ -122,8 +122,8 @@ export function PreGameTemplate({ game, onStreamStart }: PreGameTemplateProps) {
   // Generate stadium background image based on league
   const getStadiumBackground = (league: string) => {
     const stadiumImages = {
-      'mlb': 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=1200&h=800&fit=crop&q=80', // Baseball stadium - verified working
-      'nfl': 'https://images.unsplash.com/photo-1577223625816-7546f74bb7d1?w=1200&h=800&fit=crop&q=80', // Football stadium
+      'mlb': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1200&h=800&fit=crop&q=80', // Proper baseball stadium
+      'nfl': 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=1200&h=800&fit=crop&q=80', // Football stadium  
       'nba': 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&h=800&fit=crop&q=80', // Basketball arena
       'nhl': 'https://images.unsplash.com/photo-1515703407324-5f753afd8be8?w=1200&h=800&fit=crop&q=80'  // Hockey arena
     };
