@@ -67,6 +67,12 @@ export default function Dashboard() {
     enabled: !!user
   });
 
+  // Fetch user transactions
+  const { data: userTransactions } = useQuery({
+    queryKey: ['/api/user/transactions'],
+    enabled: !!user
+  });
+
   const handleEditProfile = () => {
     toast({
       title: "Profile Updated",
@@ -259,22 +265,34 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-[#1e0b3d] rounded-lg border border-[#3a2957]">
-                    <div>
-                      <p className="text-white text-sm font-medium">Premium Plan</p>
-                      <p className="text-purple-300 text-xs">Jan 15, 2025</p>
+                {subscription ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-[#1e0b3d] rounded-lg border border-[#3a2957]">
+                      <div>
+                        <p className="text-white text-sm font-medium">{subscription.planName || 'Premium Plan'}</p>
+                        <p className="text-purple-300 text-xs">
+                          {subscription.startDate ? formatDate(subscription.startDate) : 'Current subscription'}
+                        </p>
+                      </div>
+                      <span className="text-green-400 font-medium">
+                        ${subscription.amount ? (subscription.amount / 100).toFixed(2) : '9.99'}
+                      </span>
                     </div>
-                    <span className="text-green-400 font-medium">$9.99</span>
+                    {subscription.status === 'active' && (
+                      <div className="text-center p-2 bg-green-500/10 rounded-lg">
+                        <p className="text-green-300 text-xs">
+                          ✓ Active subscription - Next billing: {subscription.endDate ? formatDate(subscription.endDate) : 'N/A'}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-[#1e0b3d] rounded-lg border border-[#3a2957]">
-                    <div>
-                      <p className="text-white text-sm font-medium">Premium Plan</p>
-                      <p className="text-purple-300 text-xs">Dec 15, 2024</p>
-                    </div>
-                    <span className="text-green-400 font-medium">$9.99</span>
+                ) : (
+                  <div className="text-center py-6">
+                    <Receipt className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">No transactions yet</p>
+                    <p className="text-purple-300 text-xs mt-1">Subscribe to see your payment history</p>
                   </div>
-                </div>
+                )}
                 <Button variant="outline" size="sm" className="w-full mt-3 border-[#3a2957] text-purple-300 hover:bg-[#7f00ff]/10">
                   View All Transactions
                 </Button>
