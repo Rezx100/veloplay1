@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
+import { initGA } from "./lib/analytics";
+import { useAnalytics } from "./hooks/use-analytics";
 
 
 import NotFound from "@/pages/not-found";
@@ -162,6 +164,9 @@ function AdminRoute({ component: Component, ...rest }: any) {
 }
 
 function Router() {
+  // Track page views when routes change
+  useAnalytics();
+  
   return (
     <AppLayout>
       <Switch>
@@ -264,6 +269,16 @@ function ApiRouteRedirector() {
 }
 
 function App() {
+  // Initialize Google Analytics when app loads
+  useEffect(() => {
+    // Verify required environment variable is present
+    if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      console.warn('Missing required Google Analytics key: VITE_GA_MEASUREMENT_ID');
+    } else {
+      initGA();
+    }
+  }, []);
+
   // Handle email verification auto-login
   useEffect(() => {
     const handleEmailVerification = async () => {
