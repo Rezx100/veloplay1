@@ -1281,29 +1281,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAdmin: false
       });
 
-      // Send our custom verification email with autoVerify parameter
-      try {
-        const emailService = await import('./emailService');
-        const host = req.get('host') || 'veloplay.tv';
-        const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('replit');
-        const protocol = isLocalhost ? 'http' : 'https';
-        const baseUrl = `${protocol}://${host}`;
-        
-        // Create our custom verification URL with autoVerify parameter
-        const verificationUrl = `${baseUrl}/auth/callback?autoVerify=true&email=${encodeURIComponent(email)}`;
-        
-        console.log(`[SIGNUP] Sending custom verification email to ${email} with URL: ${verificationUrl}`);
-        
-        const emailResult = await emailService.sendVerificationEmail(email, verificationUrl);
-        
-        if (emailResult.success) {
-          console.log(`[SIGNUP] Custom verification email sent successfully to ${email}`);
-        } else {
-          console.error(`[SIGNUP] Failed to send custom verification email:`, emailResult.error);
-        }
-      } catch (emailError) {
-        console.error(`[SIGNUP] Error sending custom verification email:`, emailError);
-      }
+      // Note: Email verification is handled by Supabase's built-in email system
+      // Make sure to update the Supabase email template with autoVerify parameter
+      console.log(`[SIGNUP] User created successfully. Supabase will send verification email to ${email}`);
       
       // Return success with session - let verification middleware handle auth checks
       return res.status(201).json({ 
