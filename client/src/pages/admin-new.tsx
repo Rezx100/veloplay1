@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllGames } from '@/hooks/useGames';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
-import OnlineUsersTracker from '@/components/admin/OnlineUsersTracker';
+
 import NetworkChannelsPanel from '@/components/admin/NetworkChannelsPanel';
 import StreamSourcesPanel from '@/components/admin/StreamSourcesPanel';
 import UserManagement from '@/components/admin/UserManagement';
@@ -899,14 +899,7 @@ export default function Admin() {
               
 
               
-              <button 
-                onClick={() => setActiveTab("online")}
-                className={`w-full flex items-center px-4 py-3 rounded-md transition-colors ${activeTab === "online" ? "bg-[#2c2c2c] text-primary" : "text-gray-400 hover:bg-[#232323] hover:text-white"}`}
-              >
-                <i className="fas fa-signal mr-3 w-5 text-center"></i>
-                <span>Online Users</span>
-                <span className="ml-auto bg-[#333] text-xs px-2 py-0.5 rounded-full animate-pulse bg-green-900"></span>
-              </button>
+
             </div>
             
             <div className="mt-8">
@@ -1033,7 +1026,7 @@ export default function Admin() {
                   {activeTab === "plans" && "Subscription Plans"}
                   {activeTab === "subscriptions" && "Active Subscriptions"}
                   {activeTab === "channels" && "Network Channels"}
-                  {activeTab === "online" && "Real-Time User Activity"}
+
                 </h1>
                 <p className="text-gray-400 text-sm mt-1">
                   {activeTab === "streams" && "Manage live stream URLs for games"}
@@ -1041,7 +1034,7 @@ export default function Admin() {
                   {activeTab === "plans" && "Configure subscription pricing plans"}
                   {activeTab === "subscriptions" && "Monitor active user subscriptions"}
                   {activeTab === "channels" && "Manage live TV network channels"}
-                  {activeTab === "online" && "See who's currently using your platform in real-time"}
+
                 </p>
               </div>
               
@@ -1084,11 +1077,7 @@ export default function Admin() {
               <NetworkChannelsPanel />
             )}
             
-            {activeTab === "online" && (
-              <div className="grid grid-cols-1 gap-6">
-                <OnlineUsersTracker />
-              </div>
-            )}
+
             
             {activeTab === "streams" && (
               <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
