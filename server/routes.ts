@@ -850,21 +850,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Now send our own custom branded email with the verification URL
-        console.log("[VERIFICATION] Sending custom verification email via Resend...");
-        const result = await emailService.sendVerificationEmail(email, verificationUrl);
-        
-        if (result.success) {
-          console.log("[VERIFICATION] Successfully sent verification email via Resend");
-          
-          return res.status(200).json({ 
-            message: "Verification email sent. Please check your inbox and spam folder for an email from noreply@veloplay.tv", 
-            success: true 
-          });
-        } else {
-          console.error("[VERIFICATION] Direct email sending failed:", result.error);
-          // Continue to fallback methods
-        }
+        // Skip custom VeloPlay email - using only Supabase verification
+        console.log("[VERIFICATION] Using Supabase verification system only");
+        // Continue to Supabase fallback methods
       } catch (directError) {
         console.error("[VERIFICATION] Error with direct email method:", directError);
         // Continue to fallback methods using Supabase
