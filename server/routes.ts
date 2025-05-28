@@ -1208,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
-      // Explicitly configure email confirmation redirect
+      // Disable Supabase's automatic email confirmation to use our custom email
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
@@ -1217,7 +1217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             first_name: firstName,
             last_name: lastName
           },
-          emailRedirectTo: `${req.protocol}://${req.get('host')}/auth/callback`
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/auth/callback?autoVerify=true&email=${encodeURIComponent(email)}`
         }
       });
       
@@ -1273,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`New user ${userId} created successfully`);
       
       // Create the user in our database without a subscription
-      await storage.createUser({
+      await storage.upsertUser({
         id: userId,
         email,
         firstName: firstName || '',
@@ -1281,10 +1281,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: null,
         isAdmin: false
       });
+
+      // Send our custom verification email with autoVerify parameter
+      try {
+        const emailService = await import('./services/emailService');
+        const host = req.get('host') || 'veloplay.tv';
+        const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('replit');
+        const protocol = isLocalhost ? 'http' : 'https';
+        const baseUrl = `${protocol}://${host}`;
+        
+        // Create our custom verification URL with autoVerify parameter
+        const verificationUrl = `${baseUrl}/auth/callback?autoVerify=true&email=${encodeURIComponent(email)}`;
+        
+        console.log(`[SIGNUP] Sending custom verification email to ${email} with URL: ${verificationUrl}`);
+        
+        const emailResult = await emailService.sendVerificationEmail(email, verificationUrl);
+        
+        if (emailResult.success) {
+          console.log(`[SIGNUP] Custom verification email sent successfully to ${email}`);
+        } else {
+          console.error(`[SIGNUP] Failed to send custom verification email:`, emailResult.error);
+        }
+      } catch (emailError) {
+        console.error(`[SIGNUP] Error sending custom verification email:`, emailError);
+      }
       
       // Return success with session - let verification middleware handle auth checks
       return res.status(201).json({ 
-        message: "Signup successful! Please verify your email to access all features.", 
+        message: "Signup successful! Please check your email to verify your account.", 
         user: data.user,
         session: data.session,
         redirectToPricing: true
