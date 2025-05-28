@@ -35,6 +35,74 @@ export async function handleGameAlertEmail(params: any) {
   return await sendGameAlert(params);
 }
 
+export async function sendVerificationEmail(email: string, verificationUrl: string): Promise<{ success: boolean; error?: string }> {
+  if (!resend) {
+    console.error('Resend not initialized - RESEND_API_KEY missing');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  try {
+    const emailHtml = createVerificationEmail(verificationUrl);
+    
+    const { data, error } = await resend.emails.send({
+      from: 'VeloPlay <noreply@veloplay.tv>',
+      to: email,
+      subject: 'Verify Your Email - VeloPlay',
+      html: emailHtml,
+    });
+
+    if (error) {
+      console.error('Verification email error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Verification email sent successfully:', data);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Verification email service error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+function createVerificationEmail(verificationUrl: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Verify Your Email - VeloPlay</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+      <div style="background-color: #7f00ff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0;">Verify Your Email</h1>
+      </div>
+      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; border: 1px solid #eee; border-top: none;">
+        <p>Welcome to VeloPlay!</p>
+        <p>Thank you for registering with VeloPlay! Please verify your email address to complete your account setup and access all features.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" style="background-color: #7f00ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+        </div>
+        <p>With your verified account, you can:</p>
+        <ul>
+          <li>Stream live games from NFL, NBA, NHL, and MLB</li>
+          <li>Get real-time game notifications</li>
+          <li>Customize your viewing experience</li>
+        </ul>
+        <p>Explore our subscription plans after verification to access premium content.</p>
+        <p>If you didn't create an account with VeloPlay, you can safely ignore this email.</p>
+        <p>The VeloPlay Team</p>
+      </div>
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>© 2025 VeloPlay. All rights reserved.</p>
+        <p>If the button doesn't work, copy and paste this link in your browser: ${verificationUrl}</p>
+        <p>This email was sent to verify your account at VeloPlay.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 interface EmailParams {
   to: string;
   subject: string;
