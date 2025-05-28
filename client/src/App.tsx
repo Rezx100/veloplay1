@@ -162,6 +162,9 @@ function AdminRoute({ component: Component, ...rest }: any) {
 }
 
 function Router() {
+  // Track user activity automatically when navigating
+  useUserActivityTracker();
+  
   return (
     <AppLayout>
       <Switch>

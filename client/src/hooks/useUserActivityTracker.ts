@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export function useUserActivityTracker() {
   const [location] = useLocation();
