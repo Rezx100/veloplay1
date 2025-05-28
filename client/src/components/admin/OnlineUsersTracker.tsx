@@ -24,44 +24,16 @@ export default function OnlineUsersTracker() {
     refetchInterval: 30000,
   });
   
-  // Sample data for display purposes until the API is populated
-  const demoUsers: OnlineUser[] = [
-    {
-      id: "1",
-      displayName: "John Smith",
-      lastActive: new Date().toISOString(),
-      loginTime: new Date(Date.now() - 35 * 60000).toISOString(),
-      currentPage: "Watch"
-    },
-    {
-      id: "2",
-      displayName: "Sarah Johnson",
-      lastActive: new Date(Date.now() - 2 * 60000).toISOString(),
-      loginTime: new Date(Date.now() - 15 * 60000).toISOString(),
-      currentPage: "Home"
-    },
-    {
-      id: "3",
-      displayName: "Admin User",
-      lastActive: new Date(Date.now() - 30000).toISOString(),
-      loginTime: new Date(Date.now() - 25 * 60000).toISOString(),
-      currentPage: "Admin"
-    }
-  ];
+
 
   useEffect(() => {
-    // For now, use the demo data until the backend API is fully functional
-    setOnlineUsers(demoUsers);
-    
-    // Once the API is working, uncomment this code:
-    /*
+    // Use real active users data from the API
     if (activeUsersData && Array.isArray(activeUsersData)) {
       setOnlineUsers(activeUsersData as OnlineUser[]);
     } else {
       setOnlineUsers([]);
     }
-    */
-  }, []);
+  }, [activeUsersData]);
 
   // Calculate time since a given timestamp
   const getTimeSince = (timestamp: string) => {
