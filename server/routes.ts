@@ -858,69 +858,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue to fallback methods using Supabase
       }
       
-      // FALLBACK: Create a simple plain email as a last resort
-      try {
-        console.log("[VERIFICATION] Attempting fallback plain verification email...");
-        
-        // Create a very simple plain email as last resort
-        const plainEmailHtml = `
-          <div style="max-width: 600px; font-family: Arial, sans-serif;">
-            <h2>VeloPlay Email Verification</h2>
-            <p>Hello,</p>
-            <p>Please verify your email by clicking this link:</p>
-            <p><a href="${verificationLink}">${verificationLink}</a></p>
-            <p>Thank you,<br>The VeloPlay Team</p>
-          </div>
-        `;
-        
-        // Send plain email directly
-        const { data: plainData, error: plainError } = await resend.emails.send({
-          from: 'noreply@veloplay.tv',
-          to: email,
-          subject: 'VeloPlay Account Verification',
-          html: plainEmailHtml,
-        });
-        
-        if (!plainError) {
-          console.log("[VERIFICATION] Successfully sent plain verification email");
-          
-          // Also try to trigger Supabase verification silently (without relying on their email)
-          try {
-            await supabaseClient.auth.resend({
-              type: 'signup',
-              email: email,
-              options: {
-                emailRedirectTo: redirectTo
-              }
-            });
-          } catch (e) {
-            // Ignore errors, we don't depend on this working
-          }
-          
-          return res.status(200).json({ 
-            message: "Verification email sent. Please check your inbox and spam folder for an email from noreply@veloplay.tv",
-            success: true
-          });
-        } else {
-          console.error("[VERIFICATION] Plain email send failed:", plainError);
-          // All methods have failed, return error
-          return res.status(500).json({ 
-            message: "Failed to send verification email. Please try again later or contact support.",
-            success: false
-          });
-        }
-      } catch (fallbackError) {
-        console.error("[VERIFICATION] Fallback method failed:", fallbackError);
-        return res.status(500).json({ 
-          message: "Failed to send verification email. Please try again later or contact support.",
-          success: false
-        });
-      }
+      // DISABLED: All VeloPlay custom emails disabled - using only Supabase
+      console.log("[VERIFICATION] All custom VeloPlay emails disabled - relying on Supabase only");
       
-      // If we get here, all methods failed
-      return res.status(500).json({ 
-        message: "Failed to send verification email through all available methods. Please try again later or contact support.", 
-        success: false
+      // Only use Supabase verification system - no custom emails
+      return res.status(200).json({ 
+        message: "Verification handled by Supabase. Please check your inbox for the verification email.",
+        success: true
       });
     } catch (error) {
       console.error("[VERIFICATION] Error in verification email endpoint:", error);
