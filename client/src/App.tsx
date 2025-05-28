@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
-import { useUserActivityTracker } from "@/hooks/useUserActivityTracker";
+
 
 import NotFound from "@/pages/not-found";
 
@@ -162,9 +162,6 @@ function AdminRoute({ component: Component, ...rest }: any) {
 }
 
 function Router() {
-  // Track user activity automatically when navigating
-  useUserActivityTracker();
-  
   return (
     <AppLayout>
       <Switch>

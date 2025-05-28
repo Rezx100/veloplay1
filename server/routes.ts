@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated, supabaseClient } from "./supabaseAuth"; // Use Supabase for auth
 import { isAdmin } from "./adminMiddleware"; // Admin middleware
-import { trackUserActivity, getActiveUsers, startCleanupInterval } from "./activeUsers";
+
 import { 
   getLeagueGames, 
   getAllGames, 
@@ -2835,16 +2835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Admin - get active users
-  app.get("/api/admin/active-users", isAuthenticated, isAdmin, (req, res) => {
-    try {
-      const activeUsers = getActiveUsers();
-      res.json(activeUsers);
-    } catch (error) {
-      console.error("Error getting active users:", error);
-      res.status(500).json({ error: "Failed to get active users" });
-    }
-  });
+
   
   // Email - send welcome email
   app.post("/api/email/welcome", (req: any, res) => {
@@ -2985,29 +2976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User activity tracking endpoint
-  app.post("/api/track-activity", isAuthenticated, (req: any, res) => {
-    try {
-      const user = req.user;
-      const { currentPage } = req.body;
-      
-      if (user) {
-        trackUserActivity(user.id, {
-          email: user.email,
-          ip: req.ip,
-          currentPage: currentPage || "Home"
-        });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error tracking user activity:", error);
-      res.status(500).json({ error: "Failed to track activity" });
-    }
-  });
 
-  // Start the cleanup interval for inactive users
-  startCleanupInterval();
   
   // Stripe Payment Routes
   app.post('/api/create-checkout-session', isAuthenticated, async (req, res) => {
