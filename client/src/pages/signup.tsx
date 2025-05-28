@@ -127,64 +127,9 @@ export default function SignupPage() {
         return;
       }
       
-      // Send verification email using Supabase's resend API first
-      // This ensures we use their official method for verification emails
-      console.log("Sending verification email through Supabase resend API...");
-      try {
-        const { data: resendData, error: resendError } = await supabaseClient.auth.resend({
-          type: 'signup',
-          email: data.email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          }
-        });
-        
-        if (resendError) {
-          console.error("Supabase resend error:", resendError);
-          // Will continue to our custom method
-        } else {
-          console.log("Successfully requested verification email from Supabase");
-        }
-      } catch (resendError) {
-        console.error("Error with Supabase resend:", resendError);
-        // Will continue to our custom method
-      }
-      
-      // GUARANTEE verification email delivery by ALSO sending it directly through our system
-      // This is a belt-and-suspenders approach to ensure email delivery
-      console.log("ALSO sending verification through our direct method as backup...");
-      
-      try {
-        // Use our reliable direct method to send the verification email
-        const verificationResponse = await fetch('/api/auth/send-verification', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            email: data.email,
-            firstName: data.firstName, 
-            useDirectMethod: true  // Special flag to use our reliable direct method
-          }),
-        });
-        
-        if (!verificationResponse.ok) {
-          console.error("Verification request failed with status:", verificationResponse.status);
-          throw new Error(`Failed to send verification email: ${verificationResponse.statusText}`);
-        }
-        
-        const responseData = await verificationResponse.json();
-        console.log("Custom verification API response:", responseData);
-        
-        if (!responseData.success) {
-          console.warn("Direct verification method returned unsuccessful status:", responseData.message);
-        } else {
-          console.log("Successfully sent verification email through our direct method");
-        }
-      } catch (verificationError) {
-        console.error("Failed to send direct verification email:", verificationError);
-        // Continue with the flow even if direct method fails
-      }
+      // Supabase automatically sends verification email during signup
+      // No additional email calls needed - let Supabase handle it
+      console.log("Supabase will automatically send verification email");
       
       // If we get here, user was created and needs to confirm email
       // We've already signed out above, but this is a good place to clear any session data
