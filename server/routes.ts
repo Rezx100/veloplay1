@@ -2985,34 +2985,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User activity tracking middleware for authenticated requests
-  app.use((req: any, res, next) => {
-    if (req.user) {
-      // Extract current page from referer
-      let currentPage = "Home";
-      if (req.headers.referer) {
-        try {
-          const url = new URL(req.headers.referer);
-          currentPage = url.pathname === "/" ? "Home" : url.pathname.replace(/^\//, "").split("/")[0];
-          // Capitalize first letter
-          currentPage = currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
-        } catch (e) {
-          // If URL parsing fails, use path
-          currentPage = req.path.replace(/^\/api\//, "").split("/")[0] || "Home";
-          currentPage = currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
-        }
+  // User activity tracking endpoint
+  app.post("/api/track-activity", isAuthenticated, (req: any, res) => {
+    try {
+      const user = req.user;
+      const { currentPage } = req.body;
+      
+      if (user) {
+        trackUserActivity(user.id, {
+          email: user.email,
+          ip: req.ip,
+          currentPage: currentPage || "Home"
+        });
       }
       
-      // Track user activity
-      trackUserActivity(req.user.id, {
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        email: req.user.email,
-        ip: req.ip,
-        currentPage
-      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking user activity:", error);
+      res.status(500).json({ error: "Failed to track activity" });
     }
-    next();
   });
 
   // Start the cleanup interval for inactive users

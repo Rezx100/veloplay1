@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
+import { useUserActivityTracker } from "@/hooks/useUserActivityTracker";
 
 import NotFound from "@/pages/not-found";
 
