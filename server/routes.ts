@@ -1208,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
-      // Sign up user without automatic email confirmation
+      // Sign up user with emailRedirectTo set but let Supabase handle the email
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
@@ -1216,7 +1216,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             first_name: firstName,
             last_name: lastName
-          }
+          },
+          emailRedirectTo: `${req.protocol}://${req.get('host')}/auth/callback?autoVerify=true&email=${encodeURIComponent(email)}`
         }
       });
       
